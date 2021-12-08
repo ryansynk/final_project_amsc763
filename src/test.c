@@ -245,6 +245,31 @@ bool test_axpy() {
     return result;
 }
 
+bool test_qr() {
+    Matrix *A = NULL;
+    Matrix *Q = NULL;
+    Matrix *R = NULL;
+    bool result = false;
+
+    double atol = 0.0000001;
+    double rtol = 0.0000001;
+
+    init_matrix(&A, 4, 4);
+    init_matrix(&Q, 4, 4);
+    init_matrix(&R, 4, 4);
+
+    rand_matrix(A);
+    qr(A, Q, R);
+    gemm(Q, R, Q, 1.0, 0.0);
+    result = assert_allclose(Q, A, atol, rtol);
+
+    free_matrix(A);
+    free_matrix(Q);
+    free_matrix(R);
+    
+    return result;
+}
+
 int main() {
     if (test_gemm()) {
         printf("test_gemm: Test PASSED\n");
@@ -276,5 +301,10 @@ int main() {
         printf("test_axpy: Test FAILED\n");
     }
 
+    if (test_qr()) {
+        printf("test_qr: Test PASSED\n");
+    } else {
+        printf("test_qr: Test FAILED\n");
+    }
     return 0;
 }

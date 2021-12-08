@@ -92,6 +92,21 @@ int rand_matrix(Matrix *A) {
     }
 }
 
+int copy_matrix(Matrix *A, Matrix *A_copy) {
+    if (A == NULL || A_copy == NULL) {
+        return EXIT_FAILURE;
+    }
+    if (A->rows != A_copy->rows || A->cols != A_copy->cols) {
+        return EXIT_FAILURE;
+    }
+    for(int i = 0; i < A->rows; i++) {
+        for(int j = 0; j < A->cols; j++) {
+            A_copy->data[i][j] = A->data[i][j];
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
 void free_matrix(Matrix *A) {
     for(int i = 0; i < A->rows; i++) {
         free(A->data[i]);

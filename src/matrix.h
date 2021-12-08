@@ -11,6 +11,7 @@ int init_matrix(Matrix **A, int rows, int cols);
 int zero_matrix(Matrix *A);
 int eye_matrix(Matrix *A);
 int rand_matrix(Matrix *A);
+int copy_matrix(Matrix *A, Matrix *A_copy);
 void free_matrix(Matrix *A);
 int axpy(Matrix *A, Matrix *B, Matrix *C, double alpha);
 int dot(Matrix *A, Matrix *B, double *d);
