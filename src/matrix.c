@@ -18,7 +18,6 @@ int print_matrix(Matrix *A) {
     }
 }
 
-// Initializes Matrix A
 int new_matrix(Matrix **A, int rows, int cols) {
     
     *A = (Matrix*) calloc(1, sizeof(Matrix *));
@@ -55,6 +54,7 @@ int zero_matrix(Matrix *A) {
 
 // Sets A to be identity
 int eye_matrix(Matrix *A) {
+
     if (A == NULL) {
         return EXIT_FAILURE;
     }
@@ -106,6 +106,7 @@ int axpy(Matrix *A, Matrix *B, Matrix *C, double alpha) {
             || (A->rows != C->rows)) {
         return EXIT_FAILURE;
     } else {
+        //Matrix *sum = new_matrix(A->rows, A->cols);
         for(int i = 0; i < C->rows; i++) {
             for(int j = 0; j < C->cols; j++) {
                 C->data[i][j] = alpha * A->data[i][j] + B->data[i][j];
@@ -164,9 +165,29 @@ int mdot(Matrix *A, Matrix *B, double *d) {
 }
 
 // Matrix-vector product
-// y <- alpha * Ax + beta * y
-int gemv(Matrix *A, Matrix *x, Matrix *y, double alpha, double beta) {
-    return EXIT_FAILURE;
+// C <- alpha * AB + beta * C
+// A is (M, N)
+// B is (N, 1)
+// C is (M, 1)
+int gemv(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
+    if (A == NULL || B == NULL || C == NULL) {
+        return EXIT_FAILURE;
+    } 
+    else if (C->rows != A->rows || B->rows != A->cols) {
+        return EXIT_FAILURE;
+    }
+    else if (B->cols != 1 || C->cols != 1) {
+        return EXIT_FAILURE;
+    } else {
+        for (int i = 0; i < C->rows; i++) {
+            //for (int j = 0; j < C->cols; j++) {
+                for (int k = 0; k < A->cols; k++) {
+                    C->data[i][0] += alpha * (A->data[i][k] * B->data[k][0]) + beta * C->data[i][0];
+                }
+           // }
+        }
+        return EXIT_SUCCESS;
+    }
 }
 
 // Matrix-matrix product
@@ -174,28 +195,17 @@ int gemv(Matrix *A, Matrix *x, Matrix *y, double alpha, double beta) {
 // A is (M, N)
 // B is (N, K)
 // C is (M, K)
-int gemm(int M, int N, int K, 
-        Matrix *A, 
-        Matrix *B,
-        Matrix *C) {
-
+int gemm(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
     if (A == NULL || B == NULL || C == NULL) {
         return EXIT_FAILURE;
     } 
-    if (A->rows != M || A->cols != N 
-            || B->rows != N || B->rows != K 
-            || C->rows != M || C->cols != K) {
-        return EXIT_FAILURE;
-    }
-
-    int status = zero_matrix(A);
-    if (status == EXIT_FAILURE) {
+    else if (C->rows != A->rows || C->cols != B->cols) {
         return EXIT_FAILURE;
     } else {
-        for (int i = 0; i < M; i++) {
-            for (int j = 0; j < K; j++) {
-                for (int k = 0; k < N; k++) {
-                    C->data[i][j] += A->data[i][k] * B->data[k][j];
+        for (int i = 0; i < C->rows; i++) {
+            for (int j = 0; j < C->cols; j++) {
+                for (int k = 0; k < A->cols; k++) {
+                    C->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]) + beta * C->data[i][j];
                 }
             }
         }

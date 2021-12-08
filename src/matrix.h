@@ -17,4 +17,4 @@ int dot(Matrix *A, Matrix *B, double *d);
 int norm(Matrix *A, double *d);
 int mdot(Matrix *A, Matrix *B, double *d);
 int gemv(Matrix *A, Matrix *x, Matrix *y, double alpha, double beta);
-int gemm(int M, int N, int K, Matrix *A, Matrix *B, Matrix *C);
+int gemm(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta);
