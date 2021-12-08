@@ -18,8 +18,12 @@ int print_matrix(Matrix *A) {
     }
 }
 
-int new_matrix(Matrix **A, int rows, int cols) {
-    
+// Initializes new matrix struct
+int init_matrix(Matrix **A, int rows, int cols) {
+    if (A == NULL) {
+        return EXIT_FAILURE;
+    }
+
     *A = (Matrix*) calloc(1, sizeof(Matrix *));
     if (*A == NULL) {
         return EXIT_FAILURE;

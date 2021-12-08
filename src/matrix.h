@@ -7,7 +7,7 @@ typedef struct {
 } Matrix;
 
 int print_matrix(Matrix *A);
-int new_matrix(Matrix **A, int rows, int cols);
+int init_matrix(Matrix **A, int rows, int cols);
 int zero_matrix(Matrix *A);
 int eye_matrix(Matrix *A);
 int rand_matrix(Matrix *A);

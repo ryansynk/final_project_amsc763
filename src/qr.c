@@ -23,5 +23,9 @@ int house(Matrix *x, Matrix *v) {
 }
 
 int qr(Matrix *A, Matrix *Q, Matrix *R) {
-    return EXIT_SUCCESS;
+    if (A == Q || A == R) {
+        return EXIT_FAILURE;
+    } else {
+        return EXIT_FAILURE;
+    }
 }

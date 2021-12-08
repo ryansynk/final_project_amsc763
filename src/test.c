@@ -7,10 +7,20 @@
 #include "matrix.h"
 #include "qr.h"
 
-bool assert_allclose(Matrix *actual, Matrix *expected, double rtol, double atol) {
-    double abs_err = 0.0;
-    double rel_err = 0.0;
+bool assert_close(double actual, double expected, double rtol, double atol) {
+    double abs_err = abs(actual - expected);
+    double rel_err = abs_err / expected;
+    
+    if (abs_err > atol) {
+        return false;
+    } else if (rel_err > rtol) {
+        return false;
+    } else {
+        return true;
+    }
+}
 
+bool assert_allclose(Matrix *actual, Matrix *expected, double rtol, double atol) {
     if (actual == NULL || expected == NULL) {
         return false;
     } else if (actual->rows != expected->rows || actual->cols != expected->cols) {
@@ -18,13 +28,7 @@ bool assert_allclose(Matrix *actual, Matrix *expected, double rtol, double atol)
     } else {
         for (int i = 0; i < actual->rows; i++) {
             for (int j = 0; j < actual->cols; j++) {
-                abs_err = abs(actual->data[i][j] - expected->data[i][j]);
-                rel_err = abs_err / expected->data[i][j];
-
-                if (abs_err > atol) {
-                    return false;
-                }
-                if (rel_err > rtol) {
+                if (assert_close(actual->data[i][j], expected->data[i][j], rtol, atol) == false) {
                     return false;
                 }
             }
@@ -33,17 +37,18 @@ bool assert_allclose(Matrix *actual, Matrix *expected, double rtol, double atol)
     }
 }
 
-int test_gemm() {
+bool test_gemm() {
 
     Matrix *A = NULL;
     Matrix *B = NULL;
     Matrix *C = NULL;
     Matrix *D = NULL;
+    bool result = false;
 
-    new_matrix(&A, 7, 13);
-    new_matrix(&B, 13, 11);
-    new_matrix(&C, 7, 11);
-    new_matrix(&D, 7, 11);
+    init_matrix(&A, 7, 13);
+    init_matrix(&B, 13, 11);
+    init_matrix(&C, 7, 11);
+    init_matrix(&D, 7, 11);
 
     double atol = 0.0000001;
     double rtol = 0.0000001;
@@ -79,23 +84,27 @@ int test_gemm() {
     C->data[6][0] = 3.83890419; C->data[6][1] = 2.50843657; C->data[6][2] = 2.76312083; C->data[6][3] = 3.60586034; C->data[6][4] = 4.44810986; C->data[6][5] = 3.20636823; C->data[6][6] = 3.16088101; C->data[6][7] = 3.78215606; C->data[6][8] = 3.95644532; C->data[6][9] = 3.21173466; C->data[6][10] = 2.86114049;
     
     gemm(A, B, D, 1.0, 0.0);
-    if (assert_allclose(D, C, atol, rtol)) {
-        return EXIT_SUCCESS;
-    } else {
-        return EXIT_FAILURE;
-    }
+    result = assert_allclose(D, C, atol, rtol);
+
+    free_matrix(A);
+    free_matrix(B);
+    free_matrix(C);
+    free_matrix(D);
+
+    return result;
 }
 
-int test_gemv() {
+bool test_gemv() {
     Matrix *A = NULL;
     Matrix *B = NULL;
     Matrix *C = NULL;
     Matrix *D = NULL;
+    bool result = false;
 
-    new_matrix(&A, 5, 3);
-    new_matrix(&B, 3, 1);
-    new_matrix(&C, 5, 1);
-    new_matrix(&D, 5, 1);
+    init_matrix(&A, 5, 3);
+    init_matrix(&B, 3, 1);
+    init_matrix(&C, 5, 1);
+    init_matrix(&D, 5, 1);
 
     double atol = 0.0000001;
     double rtol = 0.0000001;
@@ -117,76 +126,154 @@ int test_gemv() {
     C->data[4][0] = 0.80372939;
 
     gemv(A, B, D, 1.0, 0.0);
-    if (assert_allclose(D, C, atol, rtol)) {
-        return EXIT_SUCCESS;
-    } else {
-        return EXIT_FAILURE;
-    }
-
-}
-
-int main(int argc, char *argv[]) {
-    //Matrix *A = NULL;
-    //new_matrix(&A, 3, 3);
-    //print_matrix(A);
-
-    Matrix *A = NULL;
-    Matrix *B = NULL;
-    Matrix *C = NULL;
-
-    double *dot_val = calloc(1, sizeof(double));
-    *dot_val = 0.0;
-    int status;
-
-    srand(time(NULL));
-
-    new_matrix(&A, 3, 3);
-    new_matrix(&B, 3, 3);
-    new_matrix(&C, 3, 3);
-
-    eye_matrix(A);
-    /*
-    A->data[0][0] = 1.0; A->data[0][1] = 0.0; A->data[0][2] = 0.0;
-    A->data[1][0] = 0.0; A->data[1][1] = 1.0; A->data[1][2] = 0.0;
-    A->data[2][0] = 0.0; A->data[2][1] = 0.0; A->data[2][2] = 1.0;
-    */
-
-    printf("A = \n");
-    print_matrix(A);
-
-    rand_matrix(B);
-    printf("B = \n");
-    print_matrix(B);
-
-    axpy(A, B, C, 1.0);
-    printf("A + B = \n");
-    print_matrix(C);
-    axpy(A, B, C, 2.0);
-    printf("A + 2B = \n");
-    print_matrix(C);
-
-    mdot(A, B, dot_val);
-
-    printf("mdot(A,B) = %f\n", *dot_val);
-
-    qr(A, B, C);
+    result = assert_allclose(D, C, atol, rtol);
 
     free_matrix(A);
     free_matrix(B);
     free_matrix(C);
 
-    int result = test_gemm();
-    if (result == EXIT_SUCCESS) {
+    return result;
+}
+
+bool test_dot() {
+    Matrix *A = NULL;
+    Matrix *B = NULL;
+    bool result = false;
+
+    double actual_dot = 0.0;
+    double true_dot = 0.6319121054043978;
+    double atol = 0.0000001;
+    double rtol = 0.0000001;
+
+    init_matrix(&A, 4, 1);
+    init_matrix(&B, 4, 1);
+
+    A->data[0][0] = 0.44915435; 
+    A->data[1][0] = 0.49957255; 
+    A->data[2][0] = 0.02595143; 
+    A->data[3][0] = 0.7406385 ;
+
+    B->data[0][0] = 0.64903383; 
+    B->data[1][0] = 0.19000438; 
+    B->data[2][0] = 0.75401931; 
+    B->data[3][0] = 0.30501639;
+
+    dot(A, B, &actual_dot);
+    result = assert_close(actual_dot, true_dot, rtol, atol);
+
+    free_matrix(A);
+    free_matrix(B);
+
+    return result;
+}
+
+bool test_norm() {
+    Matrix *A = NULL;
+    Matrix *B = NULL;
+    bool result = false;
+
+    double true_norm_A = 1.0002655820973592;
+    double true_norm_B = 1.057793316050717 ;
+    double norm_A = 0.0;
+    double norm_B = 0.0;
+    double atol = 0.0000001;
+    double rtol = 0.0000001;
+
+    init_matrix(&A, 4, 1);
+    init_matrix(&B, 4, 1);
+
+    A->data[0][0] = 0.44915435; 
+    A->data[1][0] = 0.49957255; 
+    A->data[2][0] = 0.02595143; 
+    A->data[3][0] = 0.7406385 ;
+
+    B->data[0][0] = 0.64903383; 
+    B->data[1][0] = 0.19000438; 
+    B->data[2][0] = 0.75401931; 
+    B->data[3][0] = 0.30501639;
+
+    norm(A, &norm_A);
+    norm(B, &norm_B);
+
+    result = (assert_close(norm_A, true_norm_A, rtol, atol) && assert_close(norm_B, true_norm_B, rtol, atol));
+
+    free_matrix(A);
+    free_matrix(B);
+
+    return result;
+}
+
+bool test_axpy() {
+    Matrix *A = NULL;
+    Matrix *B = NULL;
+    Matrix *C = NULL;
+    Matrix *D = NULL;
+    bool result = false;
+
+    double atol = 0.0000001;
+    double rtol = 0.0000001;
+    double alpha = -2.3;
+
+    init_matrix(&A, 4, 1);
+    init_matrix(&B, 4, 1);
+    init_matrix(&C, 4, 1);
+    init_matrix(&D, 4, 1);
+
+    A->data[0][0] = 0.44915435; 
+    A->data[1][0] = 0.49957255; 
+    A->data[2][0] = 0.02595143; 
+    A->data[3][0] = 0.7406385 ;
+
+    B->data[0][0] = 0.64903383; 
+    B->data[1][0] = 0.19000438; 
+    B->data[2][0] = 0.75401931; 
+    B->data[3][0] = 0.30501639;
+    
+    C->data[0][0] = -0.38402118; 
+    C->data[1][0] = -0.95901249;
+    C->data[2][0] =  0.69433103;
+    C->data[3][0] = -1.39845216;
+    
+    axpy(A, B, D, alpha);
+    result = assert_allclose(D, C, atol, rtol);
+
+    free_matrix(A);
+    free_matrix(B);
+    free_matrix(C);
+    free_matrix(D);
+
+    return result;
+}
+
+int main() {
+    if (test_gemm()) {
         printf("test_gemm: Test PASSED\n");
     } else {
         printf("test_gemm: Test FAILED\n");
     }
 
-    result = test_gemv();
-    if (result == EXIT_SUCCESS) {
+    if (test_gemv()) {
         printf("test_gemv: Test PASSED\n");
     } else {
         printf("test_gemv: Test FAILED\n");
+    }
+
+    if (test_dot()) {
+        printf("test_dot: Test PASSED\n");
+    } else {
+        printf("test_dot: Test FAILED\n");
+    }
+
+    if (test_norm()) {
+        printf("test_norm: Test PASSED\n");
+    } else {
+        printf("test_norm: Test FAILED\n");
+    }
+
+    if (test_axpy()) {
+        printf("test_axpy: Test PASSED\n");
+    } else {
+        printf("test_axpy: Test FAILED\n");
     }
 
     return 0;

@@ -1,3 +1,3 @@
 #include <stdio.h>
 
-int test_gemm();
+bool test_gemm();
