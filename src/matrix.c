@@ -19,27 +19,6 @@ int print_matrix(Matrix *A) {
 }
 
 // Initializes Matrix A
-/*
-int new_matrix(Matrix *A, int rows, int cols) {
-    A = (Matrix*) calloc(1, sizeof(*A));
-    if (A == NULL) {
-        return EXIT_FAILURE;
-    }
-    A->rows = rows;
-    A->cols = cols;
-    A->data = (double**) calloc(A->rows, sizeof(*A->data));
-
-    for(int i = 0; i < A->rows; i++) {
-        A->data[i] = (double*) calloc(A->cols, sizeof(**A->data));
-        if (A->data[i] == NULL) {
-            return EXIT_FAILURE;
-        }
-    }
-
-    return EXIT_SUCCESS;
-}
-*/
-
 int new_matrix(Matrix **A, int rows, int cols) {
     
     *A = (Matrix*) calloc(1, sizeof(Matrix *));
@@ -48,12 +27,10 @@ int new_matrix(Matrix **A, int rows, int cols) {
     }
     (*A)->rows = rows;
     (*A)->cols = cols;
-    //*A->data = (double**) calloc(*A->rows, sizeof(double *));
     (*A)->data = (double**) calloc(rows, sizeof(double **));
 
     for(int i = 0; i < rows; i++) {
         (*A)->data[i] = (double *) calloc(cols, sizeof(double *));
-        //A->data[i] = (double*) calloc(A->cols, sizeof(**A->data));
         if ((*A)->data[i] == NULL) {
             return EXIT_FAILURE;
         }
@@ -64,7 +41,6 @@ int new_matrix(Matrix **A, int rows, int cols) {
 
 // Sets A to be zero matrix
 int zero_matrix(Matrix *A) {
-    // int status = new_matrix(A, rows, cols);
     if (A == NULL) {
         return EXIT_FAILURE;
     } else {
@@ -79,8 +55,6 @@ int zero_matrix(Matrix *A) {
 
 // Sets A to be identity
 int eye_matrix(Matrix *A) {
-    //int status = new_matrix(A, rows, rows);
-
     if (A == NULL) {
         return EXIT_FAILURE;
     }
@@ -102,7 +76,6 @@ int eye_matrix(Matrix *A) {
 // Sets A to have random values
 int rand_matrix(Matrix *A) {
 
-    //int status = new_matrix(A, rows, cols);
     if (A == NULL) {
         return EXIT_FAILURE;
     } else {
@@ -133,7 +106,6 @@ int axpy(Matrix *A, Matrix *B, Matrix *C, double alpha) {
             || (A->rows != C->rows)) {
         return EXIT_FAILURE;
     } else {
-        //Matrix *sum = new_matrix(A->rows, A->cols);
         for(int i = 0; i < C->rows; i++) {
             for(int j = 0; j < C->cols; j++) {
                 C->data[i][j] = alpha * A->data[i][j] + B->data[i][j];
