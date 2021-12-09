@@ -107,6 +107,39 @@ int copy_matrix(Matrix *A, Matrix *A_copy) {
     return EXIT_SUCCESS;
 }
 
+int new_copy_matrix(Matrix *A, Matrix *A_copy, int rows, int cols) {
+    if (A == NULL || A_copy == NULL) {
+        return EXIT_FAILURE;
+    }
+    for(int i = 0; i < rows; i++) {
+        for(int j = 0; j < cols; j++) {
+            A_copy->data[i][j] = A->data[i][j];
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
+//int copy_submatrix(Matrix *A, Matrix *A_copy, int A_copy_rows, int A_copy_cols, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
+int copy_submatrix(double **A, double **A_copy, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
+    if (A == NULL || A_copy == NULL) {
+        return EXIT_FAILURE;
+    }
+    // TODO check dimensions somehow
+    
+    int copy_row_idx = 0;
+    int copy_col_idx = 0;
+    for (int i = sub_row_beg; i < sub_row_end; i++) {
+        copy_col_idx = 0;
+        for (int j = sub_col_beg; j < sub_col_end; j++) {
+            //A_copy->data[copy_row_idx][copy_col_idx] = A->data[i][j];
+            A_copy[copy_row_idx][copy_col_idx] = A[i][j];
+            copy_col_idx++;
+        }
+        copy_row_idx++; 
+    }
+    return EXIT_SUCCESS;
+}
+
 void free_matrix(Matrix *A) {
     for(int i = 0; i < A->rows; i++) {
         free(A->data[i]);
@@ -133,6 +166,26 @@ int axpy(Matrix *A, Matrix *B, Matrix *C, double alpha) {
         }
         return EXIT_SUCCESS;
     }
+}
+
+int axpy_submatrix(double **A, double **B, double**C, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
+    if (A == NULL || B == NULL || C == NULL) {
+        return EXIT_FAILURE;
+    }
+    // TODO check dimensions somehow
+    
+    int B_row_idx = 0;
+    int B_col_idx = 0;
+    // take a submatrix of R, and add it to B
+    for (int i = sub_row_beg; i < sub_row_end; i++) {
+        B_col_idx = 0;
+        for (int j = sub_col_beg; j < sub_col_end; j++) {
+            C[i][j] = A[i][j] + B[B_row_idx][B_col_idx];
+            B_col_idx++;
+        }
+        B_row_idx++;
+    }
+    return EXIT_SUCCESS;
 }
 
 // Dot product of two column vectors
@@ -214,13 +267,15 @@ int gemv(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
 // A is (M, N)
 // B is (N, K)
 // C is (M, K)
-int gemm(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
+int gemm(matrix_operation_t transa, matrix_operation_t transb, Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
     if (A == NULL || B == NULL || C == NULL) {
         return EXIT_FAILURE;
     } 
-    else if (C->rows != A->rows || C->cols != B->cols) {
-        return EXIT_FAILURE;
-    } else {
+    if (transa == MATRIX_OP_N && transb == MATRIX_OP_N) {
+        if (C->rows != A->rows || C->cols != B->cols) {
+            return EXIT_FAILURE;
+        }
+        // Regular AB
         for (int i = 0; i < C->rows; i++) {
             for (int j = 0; j < C->cols; j++) {
                 for (int k = 0; k < A->cols; k++) {
@@ -229,5 +284,13 @@ int gemm(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
             }
         }
         return EXIT_SUCCESS;
+    } else if (transa == MATRIX_OP_T && transb == MATRIX_OP_N) {
+        return EXIT_FAILURE;
+    } else if (transa == MATRIX_OP_N && transb == MATRIX_OP_T) {
+        return EXIT_FAILURE;
+    } else if (transa == MATRIX_OP_T && transb == MATRIX_OP_T){
+        return EXIT_FAILURE;
+    } else {
+        return EXIT_FAILURE;
     }
 }
