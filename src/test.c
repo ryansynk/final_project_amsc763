@@ -83,12 +83,7 @@ bool test_gemm() {
     C->data[5][0] = 4.05145116; C->data[5][1] = 2.67856022; C->data[5][2] = 2.82179359; C->data[5][3] = 3.81426254; C->data[5][4] = 4.1641133 ; C->data[5][5] = 3.22806188; C->data[5][6] = 3.09282445; C->data[5][7] = 3.8366267 ; C->data[5][8] = 3.95608851; C->data[5][9] = 3.02337526; C->data[5][10] = 2.85724511;
     C->data[6][0] = 3.83890419; C->data[6][1] = 2.50843657; C->data[6][2] = 2.76312083; C->data[6][3] = 3.60586034; C->data[6][4] = 4.44810986; C->data[6][5] = 3.20636823; C->data[6][6] = 3.16088101; C->data[6][7] = 3.78215606; C->data[6][8] = 3.95644532; C->data[6][9] = 3.21173466; C->data[6][10] = 2.86114049;
     
-<<<<<<< Updated upstream
     gemm(MATRIX_OP_N, MATRIX_OP_N, A, B, D, 1.0, 0.0);
-=======
-    gemm(A, B, D, 1.0, 0.0);
-    print_matrix(D);
->>>>>>> Stashed changes
     result = assert_allclose(D, C, atol, rtol);
 
     free_matrix(A);
