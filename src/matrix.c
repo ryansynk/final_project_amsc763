@@ -251,13 +251,18 @@ int gemv(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
     else if (B->cols != 1 || C->cols != 1) {
         return EXIT_FAILURE;
     } else {
+        Matrix *C_copy = NULL;
+        init_matrix(&C_copy, C->rows, C->cols);
+        // TODO: Do i need this?
+        //zero_matrix(C_copy);
         for (int i = 0; i < C->rows; i++) {
             //for (int j = 0; j < C->cols; j++) {
                 for (int k = 0; k < A->cols; k++) {
-                    C->data[i][0] += alpha * (A->data[i][k] * B->data[k][0]) + beta * C->data[i][0];
+                    C_copy->data[i][0] += alpha * (A->data[i][k] * B->data[k][0]) + beta * C->data[i][0];
                 }
            // }
         }
+        copy_matrix(C_copy, C);
         return EXIT_SUCCESS;
     }
 }
@@ -275,14 +280,19 @@ int gemm(matrix_operation_t transa, matrix_operation_t transb, Matrix *A, Matrix
         if (C->rows != A->rows || C->cols != B->cols) {
             return EXIT_FAILURE;
         }
-        // Regular AB
+        Matrix *C_copy = NULL;
+        init_matrix(&C_copy, C->rows, C->cols);
+        zero_matrix(C_copy);
         for (int i = 0; i < C->rows; i++) {
             for (int j = 0; j < C->cols; j++) {
                 for (int k = 0; k < A->cols; k++) {
-                    C->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]) + beta * C->data[i][j];
+                    //C->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]) + beta * C->data[i][j];
+                    C_copy->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]) + beta * C->data[i][j];
+                    //C->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]);
                 }
             }
         }
+        copy_matrix(C_copy, C);
         return EXIT_SUCCESS;
     } else if (transa == MATRIX_OP_T && transb == MATRIX_OP_N) {
         return EXIT_FAILURE;
