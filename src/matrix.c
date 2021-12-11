@@ -5,6 +5,10 @@
 #include <stdbool.h>
 #include "matrix.h"
 
+//TODO Add better error handling: program should actually die if things mess up
+//TODO Transition to like, not even using the matrix struct
+//TODO Fix resource leaks
+
 int print_matrix(Matrix *A) {
     if (A == NULL) {
         return EXIT_FAILURE;
@@ -21,6 +25,7 @@ int print_matrix(Matrix *A) {
 
 // Initializes new matrix struct
 int init_matrix(Matrix **A, int rows, int cols) {
+    // TODO make sure this is always zero
     if (A == NULL) {
         return EXIT_FAILURE;
     }
@@ -80,10 +85,10 @@ int eye_matrix(Matrix *A) {
 
 // Sets A to have random values
 int rand_matrix(Matrix *A) {
-
     if (A == NULL) {
         return EXIT_FAILURE;
     } else {
+        srand(time(0));
         for(int i = 0; i < A->rows; i++) {
             for(int j = 0; j < A->cols; j++) {
                 A->data[i][j] = (double) rand() / ((double) RAND_MAX + 1);
@@ -94,15 +99,34 @@ int rand_matrix(Matrix *A) {
 }
 
 int copy_matrix(Matrix *A, Matrix *A_copy) {
+    //TODO: I don't think this one does anything, should
+    //probably be deprecated
     if (A == NULL || A_copy == NULL) {
         return EXIT_FAILURE;
     }
     if (A->rows != A_copy->rows || A->cols != A_copy->cols) {
         return EXIT_FAILURE;
     }
+    A_copy->rows = A->rows;
+    A_copy->cols = A->cols;
     for(int i = 0; i < A->rows; i++) {
         for(int j = 0; j < A->cols; j++) {
             A_copy->data[i][j] = A->data[i][j];
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
+int copy_matrix_deep(Matrix **A, Matrix **A_copy) {
+    //TODO: Is this a resource leak?
+    if (A == NULL || A_copy == NULL) {
+        return EXIT_FAILURE;
+    }
+    (*A_copy)->rows = (*A)->rows;
+    (*A_copy)->cols = (*A)->cols;
+    for(int i = 0; i < (*A)->rows; i++) {
+        for(int j = 0; j < (*A)->cols; j++) {
+            (*A_copy)->data[i][j] = (*A)->data[i][j];
         }
     }
     return EXIT_SUCCESS;
@@ -120,19 +144,6 @@ int copy_matrix_ptr(double **A, double **A_copy, int rows, int cols) {
     return EXIT_SUCCESS;
 }
 
-int new_copy_matrix(Matrix *A, Matrix *A_copy, int rows, int cols) {
-    if (A == NULL || A_copy == NULL) {
-        return EXIT_FAILURE;
-    }
-    for(int i = 0; i < rows; i++) {
-        for(int j = 0; j < cols; j++) {
-            A_copy->data[i][j] = A->data[i][j];
-        }
-    }
-    return EXIT_SUCCESS;
-}
-
-//int copy_submatrix(Matrix *A, Matrix *A_copy, int A_copy_rows, int A_copy_cols, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
 //Copy submatrix of A into A_copy
 int copy_submatrix(double **A, double **A_copy, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
     if (A == NULL || A_copy == NULL) {
@@ -144,6 +155,9 @@ int copy_submatrix(double **A, double **A_copy, int sub_row_beg, int sub_row_end
     int copy_col_idx = 0;
     for (int i = sub_row_beg; i < sub_row_end; i++) {
         copy_col_idx = 0;
+        if (sub_col_beg == sub_col_end) {
+            A_copy[copy_row_idx][copy_col_idx] = A[i][sub_col_beg];
+        }
         for (int j = sub_col_beg; j < sub_col_end; j++) {
             //A_copy->data[copy_row_idx][copy_col_idx] = A->data[i][j];
             A_copy[copy_row_idx][copy_col_idx] = A[i][j];
@@ -182,17 +196,15 @@ void free_matrix(Matrix *A) {
 
 // C <-- alpha * A + B
 int axpy(Matrix *A, Matrix *B, Matrix *C, double alpha) {
+    //TODO: Is this a resource leak?
     if (A == NULL || B == NULL || C == NULL) {
         return EXIT_FAILURE;
     } else if ((A->rows != B->rows) 
-            || (A->cols != B->cols)
-            || (A->cols != C->cols)
-            || (A->rows != C->rows)) {
+            || (A->cols != B->cols)) {
         return EXIT_FAILURE;
     } else {
-        //Matrix *sum = new_matrix(A->rows, A->cols);
         Matrix *C_copy = NULL;
-        init_matrix(&C_copy, C->rows, C->cols);
+        init_matrix(&C_copy, A->rows, A->cols);
         for(int i = 0; i < C->rows; i++) {
             for(int j = 0; j < C->cols; j++) {
                 C_copy->data[i][j] = alpha * A->data[i][j] + B->data[i][j];
@@ -204,13 +216,13 @@ int axpy(Matrix *A, Matrix *B, Matrix *C, double alpha) {
     }
 }
 
-// NEED MATRIX DIMENSIONS OF C
 // Take submatrix of A, add it to B, and put that in a submatrix of C.
 int axpy_submatrix(double **A, double **B, double**C, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
     if (A == NULL || B == NULL || C == NULL) {
         return EXIT_FAILURE;
     }
     // TODO check dimensions somehow
+    // TODO is this a resource leak?
     
     int B_row_idx = 0;
     int B_col_idx = 0;
@@ -228,6 +240,7 @@ int axpy_submatrix(double **A, double **B, double**C, int sub_row_beg, int sub_r
         B_row_idx++;
     }
     copy_matrix_to_submatrix(C_copy->data, C, sub_row_beg, sub_row_end, sub_col_beg, sub_col_end);
+    free_matrix(C_copy);
     return EXIT_SUCCESS;
 }
 
@@ -285,58 +298,48 @@ int mdot(Matrix *A, Matrix *B, double *d) {
 // B is (N, 1)
 // C is (M, 1)
 int gemv(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
+    // TODO check dimensions
+    // TODO add transpose
     if (A == NULL || B == NULL || C == NULL) {
         return EXIT_FAILURE;
     } 
-    else if (C->rows != A->rows || B->rows != A->cols) {
-        return EXIT_FAILURE;
-    }
-    else if (B->cols != 1 || C->cols != 1) {
-        return EXIT_FAILURE;
-    } else {
+    else {
         Matrix *C_copy = NULL;
-        init_matrix(&C_copy, C->rows, C->cols);
-        // TODO: Do i need this?
-        //zero_matrix(C_copy);
-        for (int i = 0; i < C->rows; i++) {
-            //for (int j = 0; j < C->cols; j++) {
-                for (int k = 0; k < A->cols; k++) {
-                    C_copy->data[i][0] += alpha * (A->data[i][k] * B->data[k][0]) + beta * C->data[i][0];
-                }
-           // }
+        init_matrix(&C_copy, A->rows, 1);
+        for (int i = 0; i < A->rows; i++) {
+            for (int k = 0; k < A->cols; k++) {
+                C_copy->data[i][0] += alpha * (A->data[i][k] * B->data[k][0]) + beta * C->data[i][0];
+            }
         }
-        copy_matrix(C_copy, C);
+        copy_matrix_deep(&C_copy, &C);
         free_matrix(C_copy);
         return EXIT_SUCCESS;
     }
 }
 
 // Matrix-matrix product
-// C <-- alpha * AB + beta * C
-// A is (M, N)
-// B is (N, K)
-// C is (M, K)
 int gemm(matrix_operation_t transa, matrix_operation_t transb, Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
     if (A == NULL || B == NULL || C == NULL) {
         return EXIT_FAILURE;
     } 
     if (transa == MATRIX_OP_N && transb == MATRIX_OP_N) {
-        if (C->rows != A->rows || C->cols != B->cols) {
+        // C <-- alpha * AB + beta * C
+        // A is (M, N)
+        // B is (N, K)
+        // C is (M, K)
+        if (A->cols != B->rows) {
             return EXIT_FAILURE;
         }
         Matrix *C_copy = NULL;
-        init_matrix(&C_copy, C->rows, C->cols);
-        zero_matrix(C_copy);
-        for (int i = 0; i < C->rows; i++) {
-            for (int j = 0; j < C->cols; j++) {
+        init_matrix(&C_copy, A->rows, B->cols);
+        for (int i = 0; i < A->rows; i++) {
+            for (int j = 0; j < B->cols; j++) {
                 for (int k = 0; k < A->cols; k++) {
-                    //C->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]) + beta * C->data[i][j];
                     C_copy->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]) + beta * C->data[i][j];
-                    //C->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]);
                 }
             }
         }
-        copy_matrix(C_copy, C);
+        copy_matrix_deep(&C_copy, &C);
         free_matrix(C_copy);
         return EXIT_SUCCESS;
     } else if (transa == MATRIX_OP_T && transb == MATRIX_OP_N) {
@@ -346,25 +349,33 @@ int gemm(matrix_operation_t transa, matrix_operation_t transb, Matrix *A, Matrix
         // C is (N, k)
         Matrix *C_copy = NULL;
         init_matrix(&C_copy, A->cols, B->cols);
-        // TODO: is this necessary?
-        // zero_matrix(C_copy);
         for (int i = 0; i < A->cols; i++) {
-            //printf("i = %d\n", i);
             for (int j = 0; j < B->cols; j++) {
-                //printf("j = %d\n", j);
                 for (int k = 0; k < B->rows; k++) {
-                    //printf("k = %d\n", k);
-                    C_copy->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]); // + beta * C->data[i][j];
+                    C_copy->data[i][j] += alpha * (A->data[k][i] * B->data[k][j]); // + beta * C->data[i][j];
                 }
             }
         }
-        copy_matrix(C_copy, C);
+        copy_matrix_deep(&C_copy, &C);
         free_matrix(C_copy);
         return EXIT_SUCCESS;
-
-        return EXIT_FAILURE;
     } else if (transa == MATRIX_OP_N && transb == MATRIX_OP_T) {
-        return EXIT_FAILURE;
+        // C <-- A @ B.T
+        // A is (M, N)
+        // B is (K, N), B.T is (N, K)
+        // C is (M, K)
+        Matrix *C_copy = NULL;
+        init_matrix(&C_copy, A->rows, B->rows);
+        for (int i = 0; i < A->rows; i++) {
+            for (int j = 0; j < B->rows; j++) {
+                for (int k = 0; k < B->cols; k++) {
+                    C_copy->data[i][j] += alpha * (A->data[i][k] * B->data[j][k]); // + beta * C->data[i][j];
+                }
+            }
+        }
+        copy_matrix_deep(&C_copy, &C);
+        free_matrix(C_copy);
+        return EXIT_SUCCESS;
     } else if (transa == MATRIX_OP_T && transb == MATRIX_OP_T){
         return EXIT_FAILURE;
     } else {

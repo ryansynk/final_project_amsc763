@@ -7,6 +7,9 @@
 #include "matrix.h"
 #include "qr.h"
 
+
+//TODO Add tests for QR with non-square matrices
+
 bool assert_close(double actual, double expected, double rtol, double atol) {
     double abs_err = fabs(actual - expected);
     double rel_err = abs_err / expected;
