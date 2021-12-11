@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <stdbool.h>
 #include "matrix.h"
 
 int print_matrix(Matrix *A) {
@@ -107,6 +108,18 @@ int copy_matrix(Matrix *A, Matrix *A_copy) {
     return EXIT_SUCCESS;
 }
 
+int copy_matrix_ptr(double **A, double **A_copy, int rows, int cols) {
+    if (A == NULL || A_copy == NULL) {
+        return EXIT_FAILURE;
+    }
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            A_copy[i][j] = A[i][j];
+        }
+    }
+    return EXIT_SUCCESS;
+}
+
 int new_copy_matrix(Matrix *A, Matrix *A_copy, int rows, int cols) {
     if (A == NULL || A_copy == NULL) {
         return EXIT_FAILURE;
@@ -120,6 +133,7 @@ int new_copy_matrix(Matrix *A, Matrix *A_copy, int rows, int cols) {
 }
 
 //int copy_submatrix(Matrix *A, Matrix *A_copy, int A_copy_rows, int A_copy_cols, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
+//Copy submatrix of A into A_copy
 int copy_submatrix(double **A, double **A_copy, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
     if (A == NULL || A_copy == NULL) {
         return EXIT_FAILURE;
@@ -136,6 +150,24 @@ int copy_submatrix(double **A, double **A_copy, int sub_row_beg, int sub_row_end
             copy_col_idx++;
         }
         copy_row_idx++; 
+    }
+    return EXIT_SUCCESS;
+}
+
+// copy whole matrix A into submatrix of A_copy
+int copy_matrix_to_submatrix(double **A, double **A_copy, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
+    if (A == NULL || A_copy == NULL) {
+        return EXIT_FAILURE;
+    }
+    int row_idx = 0;
+    int col_idx = 0;
+    for (int i = sub_row_beg; i < sub_row_end; i++) {
+        col_idx = 0;
+        for (int j = sub_col_beg; j < sub_col_end; j++) {
+            A_copy[i][j] = A[row_idx][col_idx];
+            col_idx++;
+        }
+        row_idx++; 
     }
     return EXIT_SUCCESS;
 }
@@ -159,15 +191,21 @@ int axpy(Matrix *A, Matrix *B, Matrix *C, double alpha) {
         return EXIT_FAILURE;
     } else {
         //Matrix *sum = new_matrix(A->rows, A->cols);
+        Matrix *C_copy = NULL;
+        init_matrix(&C_copy, C->rows, C->cols);
         for(int i = 0; i < C->rows; i++) {
             for(int j = 0; j < C->cols; j++) {
-                C->data[i][j] = alpha * A->data[i][j] + B->data[i][j];
+                C_copy->data[i][j] = alpha * A->data[i][j] + B->data[i][j];
             }
         }
+        copy_matrix(C_copy, C);
+        free_matrix(C_copy);
         return EXIT_SUCCESS;
     }
 }
 
+// NEED MATRIX DIMENSIONS OF C
+// Take submatrix of A, add it to B, and put that in a submatrix of C.
 int axpy_submatrix(double **A, double **B, double**C, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end) {
     if (A == NULL || B == NULL || C == NULL) {
         return EXIT_FAILURE;
@@ -176,15 +214,20 @@ int axpy_submatrix(double **A, double **B, double**C, int sub_row_beg, int sub_r
     
     int B_row_idx = 0;
     int B_col_idx = 0;
+    Matrix *C_copy = NULL;
+    init_matrix(&C_copy, sub_row_end - sub_row_beg, sub_col_end - sub_col_beg);
+    copy_submatrix(C, C_copy->data, sub_row_beg, sub_row_end, sub_col_beg, sub_col_end);
     // take a submatrix of R, and add it to B
     for (int i = sub_row_beg; i < sub_row_end; i++) {
         B_col_idx = 0;
         for (int j = sub_col_beg; j < sub_col_end; j++) {
-            C[i][j] = A[i][j] + B[B_row_idx][B_col_idx];
+            //C_copy->data[i][j] = A[i][j] + B[B_row_idx][B_col_idx];
+            C_copy->data[B_row_idx][B_col_idx] = A[i][j] + B[B_row_idx][B_col_idx];
             B_col_idx++;
         }
         B_row_idx++;
     }
+    copy_matrix_to_submatrix(C_copy->data, C, sub_row_beg, sub_row_end, sub_col_beg, sub_col_end);
     return EXIT_SUCCESS;
 }
 
@@ -263,6 +306,7 @@ int gemv(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
            // }
         }
         copy_matrix(C_copy, C);
+        free_matrix(C_copy);
         return EXIT_SUCCESS;
     }
 }
@@ -293,8 +337,31 @@ int gemm(matrix_operation_t transa, matrix_operation_t transb, Matrix *A, Matrix
             }
         }
         copy_matrix(C_copy, C);
+        free_matrix(C_copy);
         return EXIT_SUCCESS;
     } else if (transa == MATRIX_OP_T && transb == MATRIX_OP_N) {
+        // C <-- A.T @ B
+        // A.T is (N, M), A is (M, N)
+        // B is (M, K)
+        // C is (N, k)
+        Matrix *C_copy = NULL;
+        init_matrix(&C_copy, A->cols, B->cols);
+        // TODO: is this necessary?
+        // zero_matrix(C_copy);
+        for (int i = 0; i < A->cols; i++) {
+            //printf("i = %d\n", i);
+            for (int j = 0; j < B->cols; j++) {
+                //printf("j = %d\n", j);
+                for (int k = 0; k < B->rows; k++) {
+                    //printf("k = %d\n", k);
+                    C_copy->data[i][j] += alpha * (A->data[i][k] * B->data[k][j]); // + beta * C->data[i][j];
+                }
+            }
+        }
+        copy_matrix(C_copy, C);
+        free_matrix(C_copy);
+        return EXIT_SUCCESS;
+
         return EXIT_FAILURE;
     } else if (transa == MATRIX_OP_N && transb == MATRIX_OP_T) {
         return EXIT_FAILURE;
@@ -303,4 +370,18 @@ int gemm(matrix_operation_t transa, matrix_operation_t transb, Matrix *A, Matrix
     } else {
         return EXIT_FAILURE;
     }
+}
+
+int is_zero(Matrix *A) {
+    if (A == NULL) {
+        return EXIT_FAILURE;
+    }
+    for (int i = 0; i < A->rows; i++) {
+        for (int j = 0; j < A->cols; j++) {
+            if (A->data[i][j] != 0) {
+                return false;
+            }
+        }
+    }
+    return true;
 }

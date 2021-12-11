@@ -20,8 +20,10 @@ int house(Matrix *x, Matrix *v, double *beta) {
 
         status = status || axpy(v, x, v, -norm_x);
         *beta = 0.0;
-        status = status || dot(v, v, beta);
-        *beta = 2 / *beta;
+        if (!is_zero(v)) { // if v is entirely zero, then just return with beta as 0.0
+            status = status || dot(v, v, beta);
+            *beta = 2 / *beta;
+        }
     }
     return status;
 }

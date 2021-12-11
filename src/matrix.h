@@ -28,3 +28,4 @@ int gemv(Matrix *A, Matrix *x, Matrix *y, double alpha, double beta);
 int gemm(matrix_operation_t transa, matrix_operation_t transb, 
         Matrix *A, Matrix *B, Matrix *C, 
         double alpha, double beta);
+int is_zero(Matrix *A);
