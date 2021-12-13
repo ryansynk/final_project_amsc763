@@ -6,6 +6,7 @@
 #include "test.h"
 #include "matrix.h"
 #include "qr.h"
+//#include "gpu_qr.cuh"
 
 
 //TODO Add tests for QR with non-square matrices
@@ -248,28 +249,99 @@ bool test_axpy() {
     return result;
 }
 
-bool test_qr() {
-    Matrix *A = NULL;
-    Matrix *Q = NULL;
-    Matrix *R = NULL;
-    bool result = false;
+bool test_qr(int n_max) {
+    bool result = true;
+    for (int i = 2; i < n_max; i++) {
+        int n = 10*i;
+        Matrix *A = NULL;
+        Matrix *Q = NULL;
+        Matrix *R = NULL;
+
+        double atol = 0.0000001;
+        double rtol = 0.0000001;
+
+        init_matrix(&A, 2*n, n);
+        init_matrix(&Q, 2*n, 2*n);
+        init_matrix(&R, 2*n, n);
+
+        rand_matrix(A);
+
+        clock_t start = clock(), diff;
+        qr(A, Q, R);
+        diff = clock() - start;
+        int msec = diff * 1000 / CLOCKS_PER_SEC;
+        gemm(MATRIX_OP_N, MATRIX_OP_N, Q, R, Q, 1.0, 0.0);
+        result = result && assert_allclose(Q, A, atol, rtol);
+
+        if (result == true) {
+            printf("qr PASS for problem size: (%d, %d) in: %d milliseconds\n", A->rows, A->cols, msec);
+        }
+
+        free_matrix(A);
+        free_matrix(Q);
+        free_matrix(R);
+        
+    }
+    return result;
+}
+
+bool test_gpu_qr() {
+    //bool result = true;
+    //int n = 10;
+    //Matrix *A = NULL;
+    //Matrix *Q = NULL;
+    //Matrix *R = NULL;
+
+    //double atol = 0.0000001;
+    //double rtol = 0.0000001;
+
+    //init_matrix(&A, 2*n, n);
+    //init_matrix(&Q, 2*n, 2*n);
+    //init_matrix(&R, 2*n, n);
+
+    bool result = true;
+    int n = 3;
 
     double atol = 0.0000001;
     double rtol = 0.0000001;
 
-    init_matrix(&A, 4, 4);
-    init_matrix(&Q, 4, 4);
-    init_matrix(&R, 4, 4);
+    int A_rows = 2*n;
+    int A_cols = n;
+    int Q_rows = A_rows;
+    int Q_cols = A_rows;
+    int R_rows = 2*n;
+    int R_cols = n;
 
-    rand_matrix(A);
-    qr(A, Q, R);
-    gemm(MATRIX_OP_N, MATRIX_OP_N, Q, R, Q, 1.0, 0.0);
-    result = assert_allclose(Q, A, atol, rtol);
+    double *A = NULL;
+    double *Q = NULL;
+    double *R = NULL;
 
-    free_matrix(A);
-    free_matrix(Q);
-    free_matrix(R);
-    
+    A = calloc(A_rows * A_cols, sizeof(double));
+    Q = calloc(Q_rows * Q_cols, sizeof(double));
+    R = calloc(R_rows * R_cols, sizeof(double));
+
+    rand_ptr(A, A_rows * A_cols);
+    print_ptr(A, A_rows, A_cols);
+
+    clock_t start = clock(), diff;
+    gpu_qr(A, Q, R, A_rows, A_cols);
+    diff = clock() - start;
+    int msec = diff * 1000 / CLOCKS_PER_SEC;
+    printf("did this return?\n");
+    //gemm(MATRIX_OP_N, MATRIX_OP_N, Q, R, Q, 1.0, 0.0);
+    //result = result && assert_allclose(Q, A, atol, rtol);
+
+    //if (result == true) {
+    //    printf("qr PASS for problem size: (%d, %d) in: %d milliseconds\n", A->rows, A->cols, msec);
+    //}
+
+    free(A);
+    free(Q);
+    free(R);
+
+    //free_matrix(A);
+    //free_matrix(Q);
+    //free_matrix(R);
     return result;
 }
 
@@ -304,10 +376,16 @@ int main() {
         printf("test_axpy: Test FAILED\n");
     }
 
-    if (test_qr()) {
+    if (test_qr(10)) {
         printf("test_qr: Test PASSED\n");
     } else {
         printf("test_qr: Test FAILED\n");
     }
-    return 0;
+
+    if (test_gpu_qr()) {
+        printf("test_gpu_qr: Test PASSED\n");
+    } else {
+        printf("test_gpu_qr: Test FAILED\n");
+    }
+    return 0; 
 }

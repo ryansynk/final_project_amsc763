@@ -89,7 +89,7 @@ def test_qr(n_max):
         end = time.time()
         elapsed = end - start
         np.testing.assert_allclose(A, Q @ R, rtol = 1e-9, atol = 1e-9)
-        print("qr PASS for problem size: " + str(A.shape) + " in time: " + str(elapsed))
+        print("qr PASS for problem size: " + str(A.shape) + " in: " + str(1000*elapsed) + " milliseconds")
         times.append(elapsed)
 
     return times

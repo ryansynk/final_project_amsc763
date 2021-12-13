@@ -12,10 +12,12 @@ typedef enum {
 } matrix_operation_t;
 
 int print_matrix(Matrix *A);
+int print_ptr(double *A, int A_rows, int A_cols);
 int init_matrix(Matrix **A, int rows, int cols);
 int zero_matrix(Matrix *A);
 int eye_matrix(Matrix *A);
 int rand_matrix(Matrix *A);
+int rand_ptr(double *A, int size);
 int copy_matrix(Matrix *A, Matrix *A_copy);
 int copy_submatrix(double **A, double **A_copy, int sub_row_beg, int sub_row_end, int sub_col_beg, int sub_col_end);
 void free_matrix(Matrix *A);

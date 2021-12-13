@@ -1,0 +1,5 @@
+#include <stdio.h>
+#include "matrix.h"
+
+//extern "C" int gpu_qr(Matrix *A, Matrix *Q, Matrix *R);
+int gpu_qr(Matrix *A, Matrix *Q, Matrix *R);

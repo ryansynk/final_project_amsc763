@@ -8,6 +8,8 @@
 //TODO Add better error handling: program should actually die if things mess up
 //TODO Transition to like, not even using the matrix struct
 //TODO Fix resource leaks
+//
+
 
 int print_matrix(Matrix *A) {
     if (A == NULL) {
@@ -16,6 +18,20 @@ int print_matrix(Matrix *A) {
         for (int i = 0; i < A->rows; i++) {
             for (int j = 0; j < A->cols; j++) {
                 printf("%f ", A->data[i][j]);
+            }
+            printf("\n");
+        }
+        return EXIT_SUCCESS;
+    }
+}
+
+int print_ptr(double *A, int A_rows, int A_cols) {
+    if (A == NULL) {
+        return EXIT_FAILURE;
+    } else {
+        for (int i = 0; i < A_rows; i++) {
+            for (int j = 0; j < A_cols; j++) {
+                printf("%f ", A[i*A_cols + j]);
             }
             printf("\n");
         }
@@ -88,11 +104,32 @@ int rand_matrix(Matrix *A) {
     if (A == NULL) {
         return EXIT_FAILURE;
     } else {
-        srand(time(0));
+        //srand(time(0));
         for(int i = 0; i < A->rows; i++) {
             for(int j = 0; j < A->cols; j++) {
                 A->data[i][j] = (double) rand() / ((double) RAND_MAX + 1);
             }
+        }
+        return EXIT_SUCCESS;
+    }
+}
+
+//stolen from https://stackoverflow.com/questions/33058848/generate-a-random-double-between-1-and-1/33059025
+double randfrom(double min, double max) {
+
+    double range = (max - min); 
+    double div = RAND_MAX / range;
+    return min + (rand() / div);
+}
+// Sets A to have random values
+int rand_ptr(double *A, int size) {
+    if (A == NULL) {
+        return EXIT_FAILURE;
+    } else {
+        srand(time(0));
+        for (int i = 0; i < size; i++) {
+            //A[i] = (double) rand() / ((double) RAND_MAX + 1);
+            A[i] = randfrom(-1.0, 1.0);
         }
         return EXIT_SUCCESS;
     }
