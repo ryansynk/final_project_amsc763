@@ -27,9 +27,11 @@ def block_qr(A, r):
     B = np.zeros(r)
 
     for k in range(0, int(n / r)): # Loops over all blocks
+        print("k = " + str(k))
         s = k * r
         V = np.zeros([m - s, r])
         for j in range(0, r): # Loops over every column in a block
+            print("j = " + str(j))
             u = s + j
             v, beta = house(R[u:, u])
             R[u:m, u:(s + r)] = R[u:m, u:(s + r)] - beta * v @ (v.T @ R[u:m, u:(s + r)])
@@ -38,6 +40,22 @@ def block_qr(A, r):
             v_zero_pad[(m - s - v.shape[0]):m, :] = v
             V[:, j] = v_zero_pad[:, 0]
             B[j] = beta
+
+            print("R[u:m, u:(s + r)]")
+            print(R[u:m, u:(s + r)])
+            print("V[:, j]")
+            print(V[:, j])
+            print("B[j]")
+            print(B[j])
+
+        #print("R[s:m, s:(s + r)] = ")
+        #print(R[s:m, s:(s + r)])
+
+        #print("V_mat = ")
+        #print(V)
+
+        #print("B = ")
+        #print(B)
 
         # Generate matrices W, Y such that P = I - W @ Y.T
         Y = np.atleast_2d(V[:,0]).T
@@ -64,7 +82,13 @@ def qr(A):
     R = A.copy()
 
     for k in range(0, n):
+        print("k = " + str(k))
         v, beta = house(R[k:,k])
+        print("v = ")
+        print(v)
+        print("beta = " + str(beta))
+        #print("v.T @ R[k:m, k:n] = ")
+        #print(v.T @ R[k:m, k:n])
         R[k:m, k:n] = R[k:m, k:n] - beta * v @ (v.T @ R[k:m, k:n])
         Q[:, k:m] = Q[:, k:m] - beta * (Q[:, k:m] @ v) @ v.T
 
@@ -111,8 +135,32 @@ def test_block_qr(n_max, r):
     return times
 
 def main():
-    qr_times = test_qr(30)
-    block_qr_times = test_block_qr(11, r=3)
+    #qr_times = test_qr(30)
+    #block_qr_times = test_block_qr(11, r=3)
+
+    #A = np.array([[ 0.521103,  0.251159,  0.448416 ],
+    #              [-0.557204,  0.614949, -0.261701 ],
+    #              [ 0.561759,  0.781652, -0.327026 ],
+    #              [ 0.461415, -0.611471,  0.422656 ],
+    #              [ 0.073847,  0.190156, -0.787745 ],
+    #              [-0.233277, -0.650450, -0.508967 ]])
+    #Q, R = qr(A)
+    #print("Q = ")
+    #print(Q)
+    #print("R = ")
+    #print(R)
+
+    A = np.array([[0.8054398 , 0.11770048, 0.74435746, 0.07596747],
+                  [0.47612782, 0.95610043, 0.91532087, 0.73867671],
+                  [0.43006959, 0.61098952, 0.2653968 , 0.61539964],
+                  [0.90222967, 0.13762961, 0.24488956, 0.57760962],
+                  [0.08671578, 0.33511532, 0.13160944, 0.7750951 ],
+                  [0.63046399, 0.96516845, 0.95523958, 0.99198526],
+                  [0.34393792, 0.18000136, 0.95844227, 0.39069116],
+                  [0.71946612, 0.91549769, 0.6170415 , 0.35973015]])
+
+    Q, R = block_qr(A, 2)
+
 
 if __name__ == "__main__":
     main()

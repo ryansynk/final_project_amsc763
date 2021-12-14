@@ -320,14 +320,85 @@ bool test_gpu_qr() {
     Q = calloc(Q_rows * Q_cols, sizeof(double));
     R = calloc(R_rows * R_cols, sizeof(double));
 
-    rand_ptr(A, A_rows * A_cols);
+    A[0] =  0.521103; A[6]  =  0.251159; A[12]  =  0.448416; 
+    A[1] = -0.557204; A[7]  =  0.614949; A[13]  = -0.261701; 
+    A[2] =  0.561759; A[8]  =  0.781652; A[14]  = -0.327026; 
+    A[3] =  0.461415; A[9]  = -0.611471; A[15] =  0.422656; 
+    A[4] =  0.073847; A[10] =  0.190156; A[16] = -0.787745; 
+    A[5] = -0.233277; A[11] = -0.650450; A[17] = -0.508967;
+
+    //rand_ptr(A, A_rows * A_cols);
     print_ptr(A, A_rows, A_cols);
 
     clock_t start = clock(), diff;
     gpu_qr(A, Q, R, A_rows, A_cols);
     diff = clock() - start;
     int msec = diff * 1000 / CLOCKS_PER_SEC;
-    printf("did this return?\n");
+    printf("Q = \n");
+    print_ptr(Q, Q_rows, Q_cols);
+    printf("R = \n");
+    print_ptr(R, R_rows, R_cols);
+    //gemm(MATRIX_OP_N, MATRIX_OP_N, Q, R, Q, 1.0, 0.0);
+    //result = result && assert_allclose(Q, A, atol, rtol);
+
+    //if (result == true) {
+    //    printf("qr PASS for problem size: (%d, %d) in: %d milliseconds\n", A->rows, A->cols, msec);
+    //}
+
+    free(A);
+    free(Q);
+    free(R);
+
+    //free_matrix(A);
+    //free_matrix(Q);
+    //free_matrix(R);
+    return result;
+}
+
+bool test_gpu_block_qr() {
+    bool result = true;
+    int n = 4;
+    int r = 2;
+
+    double atol = 0.0000001;
+    double rtol = 0.0000001;
+
+    int A_rows = 2*n;
+    int A_cols = n;
+    int Q_rows = A_rows;
+    int Q_cols = A_rows;
+    int R_rows = 2*n;
+    int R_cols = n;
+
+    double *A = NULL;
+    double *Q = NULL;
+    double *R = NULL;
+
+    A = calloc(A_rows * A_cols, sizeof(double));
+    Q = calloc(Q_rows * Q_cols, sizeof(double));
+    R = calloc(R_rows * R_cols, sizeof(double));
+
+
+    A[0] = 0.8054398 ; A[8]  = 0.11770048; A[16] = 0.74435746; A[24] = 0.07596747;
+    A[1] = 0.47612782; A[9]  = 0.95610043; A[17] = 0.91532087; A[25] = 0.73867671;
+    A[2] = 0.43006959; A[10] = 0.61098952; A[18] = 0.2653968 ; A[26] = 0.61539964;
+    A[3] = 0.90222967; A[11] = 0.13762961; A[19] = 0.24488956; A[27] = 0.57760962;
+    A[4] = 0.08671578; A[12] = 0.33511532; A[20] = 0.13160944; A[28] = 0.7750951 ;
+    A[5] = 0.63046399; A[13] = 0.96516845; A[21] = 0.95523958; A[29] = 0.99198526;
+    A[6] = 0.34393792; A[14] = 0.18000136; A[22] = 0.95844227; A[30] = 0.39069116;
+    A[7] = 0.71946612; A[15] = 0.91549769; A[23] = 0.6170415 ; A[31] = 0.35973015;
+
+    //rand_ptr(A, A_rows * A_cols);
+    print_ptr(A, A_rows, A_cols);
+
+    clock_t start = clock(), diff;
+    gpu_block_qr(A, Q, R, A_rows, A_cols, r);
+    diff = clock() - start;
+    int msec = diff * 1000 / CLOCKS_PER_SEC;
+    printf("Q = \n");
+    print_ptr(Q, Q_rows, Q_cols);
+    printf("R = \n");
+    print_ptr(R, R_rows, R_cols);
     //gemm(MATRIX_OP_N, MATRIX_OP_N, Q, R, Q, 1.0, 0.0);
     //result = result && assert_allclose(Q, A, atol, rtol);
 
@@ -382,10 +453,16 @@ int main() {
         printf("test_qr: Test FAILED\n");
     }
 
-    if (test_gpu_qr()) {
-        printf("test_gpu_qr: Test PASSED\n");
+    //if (test_gpu_qr()) {
+    //    printf("test_gpu_qr: Test PASSED\n");
+    //} else {
+    //    printf("test_gpu_qr: Test FAILED\n");
+    //}
+
+    if (test_gpu_block_qr()) {
+        printf("test_gpu_block_qr: Test PASSED\n");
     } else {
-        printf("test_gpu_qr: Test FAILED\n");
+        printf("test_gpu_block_qr: Test FAILED\n");
     }
     return 0; 
 }

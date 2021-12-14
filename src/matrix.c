@@ -29,9 +29,11 @@ int print_ptr(double *A, int A_rows, int A_cols) {
     if (A == NULL) {
         return EXIT_FAILURE;
     } else {
+        // Data stored in column-major order
+        //
         for (int i = 0; i < A_rows; i++) {
             for (int j = 0; j < A_cols; j++) {
-                printf("%f ", A[i*A_cols + j]);
+                printf("%f ", A[j*A_rows + i]);
             }
             printf("\n");
         }
