@@ -33,7 +33,48 @@ def block_qr(A, r):
         for j in range(0, r): # Loops over every column in a block
             print("j = " + str(j))
             u = s + j
+            print("\n")
+            print("===== gpu_house =====")
+            print("R")
+            print(R)
+            print("R[u:, u]")
+            print(R[u:, u])
+            print("u = " + str(u))
             v, beta = house(R[u:, u])
+            print("v = ")
+            print(v)
+            print("beta = " + str(beta))
+
+            print("\n")
+            print("===== cublasDgemv =====")
+
+            print("R = ")
+            print(R)
+            print("R[u:m, u:(s + r)]")
+            print(R[u:m, u:(s + r)])
+
+            print("v")
+            print(v)
+
+            print("v.T @ R[u:m, u:(s + r)] = ")
+            print(v.T @ R[u:m, u:(s + r)])
+
+            print("\n")
+            print("===== cublasDger =====")
+            print("v")
+            print(v)
+
+            print("v.T @ R[u:m, u:(s + r)] = ")
+            print(v.T @ R[u:m, u:(s + r)])
+
+            print("B[j]")
+            print(beta)
+
+            print("rows = " + str(R[u:m, u:(s + r)].shape[0]) + ", cols = " + str(R[u:m, u:(s + r)].shape[1]))
+
+            print("R[u:m, u:(s + r)] - beta * v @ (v.T @ R[u:m, u:(s + r)])")
+            print(R[u:m, u:(s + r)] - beta * v @ (v.T @ R[u:m, u:(s + r)]))
+
             R[u:m, u:(s + r)] = R[u:m, u:(s + r)] - beta * v @ (v.T @ R[u:m, u:(s + r)])
 
             v_zero_pad = np.zeros([m - s, 1])
@@ -41,12 +82,8 @@ def block_qr(A, r):
             V[:, j] = v_zero_pad[:, 0]
             B[j] = beta
 
-            print("R[u:m, u:(s + r)]")
-            print(R[u:m, u:(s + r)])
-            print("V[:, j]")
-            print(V[:, j])
-            print("B[j]")
-            print(B[j])
+            print("===== R at end of j loop =====")
+            print(R)
 
         #print("R[s:m, s:(s + r)] = ")
         #print(R[s:m, s:(s + r)])
@@ -58,16 +95,45 @@ def block_qr(A, r):
         #print(B)
 
         # Generate matrices W, Y such that P = I - W @ Y.T
+        print("===== GENERATING W, Y =====")
         Y = np.atleast_2d(V[:,0]).T
         W = -B[0] * np.atleast_2d(V[:, 0]).T
         for j in range(1, r):
+            print("=====  i = " + str(j) + "  =====")
             v = np.atleast_2d(V[:, j]).T
+            print("Y = ")
+            print(Y)
+            print("v = ")
+            print(v)
+            print("Y.T @ v")
+            print(Y.T @ v)
+            print("W")
+            print(W)
+            print("WYt_v = -B[j] * (W @ (Y.T @ v))")
+            print(-B[j] * (W @ (Y.T @ v)))
             z = -B[j] * v - B[j] * W @ (Y.T @ v)
+            print("z = ")
+            print(z)
             W = np.hstack((W, z))
             Y = np.hstack((Y, v))
+            print("Y")
+            print(Y)
+            print("W")
+            print(W)
+        print("===== COMPLETED W, Y UPDATE =====")
+        print("W = ")
+        print(W)
+        print("Y = ")
+        print(Y)
 
         # Update Q, R
+        print("===== UNDERSTANDING POTENTIAL SHAPE MISMATCH =====")
+        print("Q[:, s:].shape = " + str(Q[:, s:].shape))
+        print("W.shape" + str(W.shape))
+        print("Y.shape" + str(Y.shape))
         R[s:, s + r:] = R[s:, s + r:] + Y @ (W.T @ R[s:, s + r:])
+        print("===== FINAL R AFTER BLOCK k = " + str(k) + " =====")
+        print(R)
         Q[:, s:] = Q[:, s:] + Q[:, s:] @ W  @ Y.T
 
     return Q, R
@@ -160,6 +226,10 @@ def main():
                   [0.71946612, 0.91549769, 0.6170415 , 0.35973015]])
 
     Q, R = block_qr(A, 2)
+    print("Q = ")
+    print(Q)
+    print("R = ")
+    print(R)
 
 
 if __name__ == "__main__":
