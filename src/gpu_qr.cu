@@ -1,23 +1,41 @@
+#ifdef DEBUG
+#define DEBUG_TEST 1
+#else
+#define DEBUG_TEST 0
+#endif
+
+#define debug_print(fmt, ...) \
+            do { if (DEBUG_TEST) printf(fmt, __VA_ARGS__); } while (0)
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <cuda_runtime.h>
 #include "cublas_v2.h"
 
-__global__ void print_ptr(double *A, int A_rows, int A_cols) {
+__global__ void print_ptr(double *A, int A_rows, int A_cols, int lda) {
     // Data stored in column-major order
     //
     for (int i = 0; i < A_rows; i++) {
         for (int j = 0; j < A_cols; j++) {
-            printf("%f ", A[j*A_rows + i]);
+            //if (A[j*A_rows + i] >= 0) {
+            //    debug_print(" %f ", A[j*A_rows + i]);
+            //} else {
+            //    debug_print("%f ", A[j*A_rows + i]);
+            //}
+            if (A[j*lda + i] >= 0) {
+                debug_print(" %f ", A[j*lda + i]);
+            } else {
+                debug_print("%f ", A[j*lda + i]);
+            }
         }
-        printf("\n");
+        debug_print("%s", "\n");
     }
 }
 
 __global__ void print_ptr_num(double *A) {
     // Data stored in column-major order
-    printf("%f\n", *A);
+    debug_print("%f\n", *A);
 }
 
 static const char *_cudaGetErrorEnum(cublasStatus_t error) {
@@ -110,7 +128,7 @@ extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
 
     stat = cublasCreate(&handle);
     if (stat != CUBLAS_STATUS_SUCCESS) {
-        printf("stat = %s\n", _cudaGetErrorEnum(stat));
+        debug_print("stat = %s\n", _cudaGetErrorEnum(stat));
         cublasDestroy(handle);
         return EXIT_FAILURE;
     }
@@ -142,7 +160,7 @@ extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
     cudaStat = cudaMalloc(&dev_gamma, sizeof(double));
 
     if (cudaStat != cudaSuccess) {
-        printf("device memory allocation failed\n");
+        debug_print("%s\n", "device memory allocation failed");
         return EXIT_FAILURE;
     }
 
@@ -153,7 +171,7 @@ extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
     cudaStat = cudaMemcpy(dev_gamma, &gamma, sizeof(double), cudaMemcpyHostToDevice);
 
     if (cudaStat != cudaSuccess) {
-        printf("host to device memory copy failed\n");
+        debug_print("%s\n", "host to device memory copy failed");
         return EXIT_FAILURE;
     }
     for (int k = 0; k < A_cols; k++) {
@@ -171,7 +189,7 @@ extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
                            (dev_Rv + k), 1);
 
         if (stat != CUBLAS_STATUS_SUCCESS) {
-            printf("stat = %s\n", _cudaGetErrorEnum(stat));
+            debug_print("stat = %s\n", _cudaGetErrorEnum(stat));
             cudaFree(dev_A);
             cudaFree(dev_Q);
             cudaFree(dev_R);
@@ -191,7 +209,7 @@ extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
                           (dev_R + k + k * R_rows), R_rows);
 
         if (stat != CUBLAS_STATUS_SUCCESS) {
-            printf("stat = %s\n", _cudaGetErrorEnum(stat));
+            debug_print("stat = %s\n", _cudaGetErrorEnum(stat));
             cudaFree(dev_A);
             cudaFree(dev_Q);
             cudaFree(dev_R);
@@ -212,7 +230,7 @@ extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
                            (dev_Qv + k), 1);
 
         if (stat != CUBLAS_STATUS_SUCCESS) {
-            printf("stat = %s\n", _cudaGetErrorEnum(stat));
+            debug_print("stat = %s\n", _cudaGetErrorEnum(stat));
             cudaFree(dev_A);
             cudaFree(dev_Q);
             cudaFree(dev_R);
@@ -222,7 +240,7 @@ extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
             cublasDestroy(handle);
             return EXIT_FAILURE;
         }
-        printf("beta = %f\n", beta);
+        debug_print("beta = %f\n", beta);
 
         // Sets Q[:, k:m] = Q[:, k:m] - beta * (Q[:, k:m] @ v) @ v.T
         stat = cublasDger(handle, 
@@ -233,7 +251,7 @@ extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
                           (dev_Q + k * Q_rows), Q_rows);
 
         if (stat != CUBLAS_STATUS_SUCCESS) {
-            printf("stat = %s\n", _cudaGetErrorEnum(stat));
+            debug_print("stat = %s\n", _cudaGetErrorEnum(stat));
             cudaFree(dev_A);
             cudaFree(dev_Q);
             cudaFree(dev_R);
@@ -266,6 +284,7 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
         status = EXIT_FAILURE;
     } 
 
+    // Initialize Q to identity
     int Q_rows = A_rows;
     int Q_cols = A_rows;
     for (int i = 0; i < A_rows; i++) {
@@ -278,57 +297,79 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
         }
     }
 
+    // Initialize R to Q
     int R_rows = A_rows;
     int R_cols = A_cols;
     for (int i = 0; i < A_rows * A_cols; i++) {
         R[i] = A[i];
     }
 
+    // CuBLAS declarations
     cudaError_t cudaStat;
     cublasStatus_t stat;
     cublasHandle_t handle;
 
     stat = cublasCreate(&handle);
     if (stat != CUBLAS_STATUS_SUCCESS) {
-        printf("stat = %s\n", _cudaGetErrorEnum(stat));
+        debug_print("stat = %s\n", _cudaGetErrorEnum(stat));
         cublasDestroy(handle);
         return EXIT_FAILURE;
     } 
 
-    double* dev_A = NULL;
-    double* dev_Q = NULL;
-    double* dev_R = NULL;
-    double* dev_x = NULL;
-    //double* dev_v = NULL;
-    double* dev_Rv = NULL;
-    double* dev_Qv = NULL;
-    double* dev_beta = NULL;
-    double* dev_alpha = NULL;
-    double* dev_gamma = NULL;
-
-    double* dev_Y = NULL;
-    double* dev_W = NULL;
-
-    double* dev_B = NULL;
-    double* dev_Vmat = NULL;
-    double* B = NULL;
-
-    double* dev_Yt_v = NULL;
-    double* dev_WYt_v = NULL;
+    // Pointer declarations for matrices in computation
+    double *dev_A, *dev_Q, *dev_R, *dev_x; 
+    double *dev_Rv, *dev_Qv; //tmp values, R times v, Q times v
+    double *dev_beta, *dev_alpha, *dev_gamma;
+    double *dev_Y, *dev_W, *dev_B, *dev_Vmat, *B;
+    double *dev_Yt_v, *dev_WYt_v;
 
     // intermediate -- used for updating R
-    double* dev_WTR = NULL;  // "W transpose times R" 
-    double* dev_YWTR = NULL; // "Y times W transpose times R" 
+    // W transpose times R and Y times W transpose times R
+    double *dev_WTR,* dev_YWTR;
 
     // intermediate -- used for updating Q
-    double* dev_WYT = NULL;  // "W times Y transpose"
-    double* dev_QWYT = NULL; // "Q times W times Y transpose"
+    // "W times Y transpose" and "Q times W times Y transpose"
+    double *dev_WYT, *dev_QWYT;
 
-    double beta = 0.0;
     double alpha = 1.0;
     double gamma = 0.0;
     int s = 0;
     int u = 0;
+
+    //double* dev_A = NULL;
+    //double* dev_Q = NULL;
+    //double* dev_R = NULL;
+    //double* dev_x = NULL;
+    ////double* dev_v = NULL;
+    //double* dev_Rv = NULL;
+    //double* dev_Qv = NULL;
+    //double* dev_beta = NULL;
+    //double* dev_alpha = NULL;
+    //double* dev_gamma = NULL;
+
+    //double* dev_Y = NULL;
+    //double* dev_W = NULL;
+
+    //double* dev_B = NULL;
+    //double* dev_Vmat = NULL;
+    //double* B = NULL;
+
+    //double* dev_Yt_v = NULL;
+    //double* dev_WYt_v = NULL;
+
+    //// intermediate -- used for updating R
+    //double* dev_WTR = NULL;  // "W transpose times R" 
+    //double* dev_YWTR = NULL; // "Y times W transpose times R" 
+
+    //// intermediate -- used for updating Q
+    //double* dev_WYT = NULL;  // "W times Y transpose"
+    //double* dev_QWYT = NULL; // "Q times W times Y transpose"
+
+    //double beta = 0.0;
+    //double alpha = 1.0;
+    //double gamma = 0.0;
+    //int s = 0;
+    //int u = 0;
 
     cudaStat = cudaMalloc(&dev_A, A_rows * A_cols * sizeof(double));
     cudaStat = cudaMalloc(&dev_Q, Q_rows * Q_cols * sizeof(double));
@@ -345,6 +386,7 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
 
     cudaStat = cudaMalloc(&dev_B, r * sizeof(double));
     cudaStat = cudaMalloc(&dev_Vmat, A_rows * r * sizeof(double));
+    cudaMemset(dev_Vmat, 0, A_rows * r * sizeof(double));
 
     cudaStat = cudaMalloc(&dev_Y, A_rows * r * sizeof(double));
     cudaStat = cudaMalloc(&dev_W, A_rows * r * sizeof(double));
@@ -390,7 +432,7 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
     B = (double *)malloc(r * sizeof(double));
 
     if (cudaStat != cudaSuccess) {
-        printf("device memory allocation failed\n");
+        debug_print("%s\n", "device memory allocation failed");
         return EXIT_FAILURE;
     }
 
@@ -401,19 +443,19 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
     cudaStat = cudaMemcpy(dev_gamma, &gamma, sizeof(double), cudaMemcpyHostToDevice);
 
     if (cudaStat != cudaSuccess) {
-        printf("host to device memory copy failed\n");
+        debug_print("%s\n", "host to device memory copy failed");
         return EXIT_FAILURE;
     }
 
     for (int k = 0; k < (A_cols / r); k++) {
-        printf("k = %d\n", k);
+        debug_print("k = %d\n", k);
         s = k * r;
         //TODO: zero out dev_Vmat?
         for (int j = 0; j < r; j++) {
 
             //gpu_house<<<1,1>>>(handle, k, R_rows, R_cols, dev_R, dev_v, dev_beta);
             //cudaStat = cudaMemcpy(&beta, dev_beta, sizeof(double), cudaMemcpyDeviceToHost);
-            //cudaDeviceSynchronize();
+            //
 
             //// Gets dev_Rv = R[k:m, k:n] @ v
             //stat = cublasDgemv(handle, CUBLAS_OP_T, 
@@ -424,43 +466,42 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
             //                   &gamma,
             //                   (dev_Rv + k), 1);
 
-            printf("j = %d\n", j);
+            debug_print("j = %d\n", j);
             u = s + j;
             //gpu_house<<<1,1>>>(handle, u, R_rows, R_cols, dev_R, dev_Vmat + u * R_rows, dev_beta);
-            printf("\n");
-            printf("===== gpu_house =====\n");
+            debug_print("%s\n","");
+            debug_print("%s\n", "===== gpu_house =====");
 
-            printf("R[u:, u]\n");
-            print_ptr<<<1,1>>>(dev_R + u + u * R_rows, R_rows - u, 1);
-            cudaDeviceSynchronize();
+            debug_print("%s\n","R[u:, u]");
+            //print_ptr<<<1,1>>>(dev_R + u + u * R_rows, R_rows - u, 1, R_rows);
 
-            printf("u = %d\n", u);
+            debug_print("u = %d\n", u);
 
             gpu_house<<<1,1>>>(handle, u, R_rows, R_cols, dev_R, (dev_Vmat + j * R_rows + j - u), dev_beta);
             cudaStat = cudaMemcpy((B + j), dev_beta, sizeof(double), cudaMemcpyDeviceToHost);
 
-            printf("v = \n");
-            print_ptr<<<1,1>>>(dev_Vmat + j * R_rows + j, R_rows - j, 1);
-            cudaDeviceSynchronize();
-            printf("beta = %f\n", *(B + j));
+            debug_print("%s\n", "v = ");
+            //print_ptr<<<1,1>>>(dev_Vmat + j * R_rows + j, R_rows - j, 1, R_rows);
+            
+            debug_print("beta = %f\n", *(B + j));
             //cudaStat = cudaMemcpy(&beta, dev_beta, sizeof(double), cudaMemcpyDeviceToHost);
             //B[j] = beta;
             // R[u:m, u:(s + r)].T @ v
 
-            printf("\n");
-            printf("===== cublasDgemv =====\n");
+            debug_print("%s\n", "");
+            debug_print("%s\n", "===== cublasDgemv =====");
 
-            printf("R = \n");
-            print_ptr<<<1,1>>>(dev_R, R_rows, R_cols);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "R = ");
+            //print_ptr<<<1,1>>>(dev_R, R_rows, R_cols, R_rows);
+            
 
-            printf("R[u:m, u:(s + r)] = \n");
-            print_ptr<<<1,1>>>(dev_R + u + u * R_rows, R_rows - u, (s + r) - u);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "R[u:m, u:(s + r)] = ");
+            //print_ptr<<<1,1>>>(dev_R + u + u * R_rows, R_rows - u, (s + r) - u, R_rows);
+            
 
-            printf("dev_Vmat[:, j] = \n");
-            print_ptr<<<1,1>>>(dev_Vmat + j + j * R_rows, R_rows - j, 1);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "dev_Vmat[:, j] = ");
+            //print_ptr<<<1,1>>>(dev_Vmat + j + j * R_rows, R_rows - j, 1, R_rows);
+            
 
             stat = cublasDgemv(handle, CUBLAS_OP_T, 
                                R_rows - u, (s + r) - u, 
@@ -471,12 +512,12 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
                                &gamma,
                                (dev_Rv + u), 1);
 
-            printf("R[u:m, u:(s + r)].T @ v\n");
-            print_ptr<<<1,1>>>((dev_Rv + u), (s + r) - u, 1);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "R[u:m, u:(s + r)].T @ v\n");
+            //print_ptr<<<1,1>>>((dev_Rv + u), (s + r) - u, 1, (s + r) - u);
+            
 
             if (stat != CUBLAS_STATUS_SUCCESS) {
-                printf("stat = %s\n", _cudaGetErrorEnum(stat));
+                debug_print("stat = %s\n", _cudaGetErrorEnum(stat));
                 cudaFree(dev_A);
                 cudaFree(dev_Q);
                 cudaFree(dev_R);
@@ -488,21 +529,21 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
             }
 
             // Sets R[u:m, u:(s+r)] = R[u:m, u:(s+r)] - beta * v @ dev_Rv.T
-            printf("\n");
-            printf("===== cublasDger =====\n");
+            debug_print("%s\n", "");
+            debug_print("%s\n", "===== cublasDger =====");
 
-            printf("dev_Vmat[:, j] = \n");
-            print_ptr<<<1,1>>>(dev_Vmat + j + j * R_rows, R_rows - j, 1);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "dev_Vmat[:, j] = ");
+            //print_ptr<<<1,1>>>(dev_Vmat + j + j * R_rows, R_rows - j, 1, R_rows);
+            
 
-            printf("dev_Rv + u\n");
-            print_ptr<<<1,1>>>((dev_Rv + u), (s + r) - u, 1);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "dev_Rv + u");
+            //print_ptr<<<1,1>>>((dev_Rv + u), (s + r) - u, 1, s + r - u);
+            
 
-            printf("B[j] = %f\n", *(B + j));
-            cudaDeviceSynchronize();
+            debug_print("B[j] = %f\n", *(B + j));
+            
 
-            printf("rows = %d, cols = %d\n", R_rows - u, (s + r) - u);
+            debug_print("rows = %d, cols = %d\n", R_rows - u, (s + r) - u);
 
             stat = cublasDger(handle, 
                               R_rows - u, (s + r) - u,
@@ -512,12 +553,12 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
                               (dev_Rv + u), 1,
                               (dev_R + u + u * R_rows), R_rows);
 
-            printf("R[u:m, u:(s + r)] = \n");
-            print_ptr<<<1,1>>>(dev_R + u + u * R_rows, R_rows - u, (s + r) - u);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "R[u:m, u:(s + r)] = ");
+            //print_ptr<<<1,1>>>(dev_R + u + u * R_rows, R_rows - u, (s + r) - u, R_rows);
+            
 
             if (stat != CUBLAS_STATUS_SUCCESS) {
-                printf("stat = %s\n", _cudaGetErrorEnum(stat));
+                debug_print("stat = %s\n", _cudaGetErrorEnum(stat));
                 cudaFree(dev_A);
                 cudaFree(dev_Q);
                 cudaFree(dev_R);
@@ -528,41 +569,44 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
                 return EXIT_FAILURE;
             }
 
-            //printf("dev_B[j] = \n");
-            //print_ptr_num<<<1,1>>>((dev_B + j));
-            //cudaDeviceSynchronize();
+            //debug_print("dev_B[j] = \n");
+            ////print_ptr_num<<<1,1>>>((dev_B + j));
+            //
 
-            //printf("beta = %f\n", beta);
-            //cudaDeviceSynchronize();
-            printf("===== R at end of j loop =====\n");
-            printf("R = \n");
-            print_ptr<<<1,1>>>(dev_R, R_rows, R_cols);
-            cudaDeviceSynchronize();
+            //debug_print("beta = %f\n", beta);
+            //
+            debug_print("%s\n", "===== R at end of j loop =====");
+            debug_print("%s\n", "R = ");
+            //print_ptr<<<1,1>>>(dev_R, R_rows, R_cols, R_rows);
+            
         }
 
         // copy W, Y vectors
 
         //Y = np.atleast_2d(V[:,0]).T
         // copy first column of dev_Vmat into first column of Y
-        printf("\n");
-        printf("===== GENERATING W, Y =====\n");
-        cudaStat = cudaMemcpy(dev_Y, dev_Vmat, A_rows * sizeof(double), cudaMemcpyDeviceToDevice); // Y = V[:, 0]
-        cudaStat = cudaMemcpy(dev_W, dev_Vmat, A_rows * sizeof(double), cudaMemcpyDeviceToDevice); // W = V[:, 0]
-        cublasDscal(handle, A_rows, B, dev_W, 1); // W = -B[0] * V[:, 0]
+        debug_print("%s\n", "");
+        debug_print("%s\n", "===== GENERATING W, Y =====");
+        //cudaStat = cudaMemcpy(dev_Y, dev_Vmat, A_rows * sizeof(double), cudaMemcpyDeviceToDevice); // Y = V[:, 0]
+        //cudaStat = cudaMemcpy(dev_W, dev_Vmat, A_rows * sizeof(double), cudaMemcpyDeviceToDevice); // W = V[:, 0]
+        cudaStat = cudaMemcpy(dev_Y, dev_Vmat, (A_rows - s) * sizeof(double), cudaMemcpyDeviceToDevice); // Y = V[:, 0]
+        cudaStat = cudaMemcpy(dev_W, dev_Vmat, (A_rows - s) * sizeof(double), cudaMemcpyDeviceToDevice); // W = V[:, 0]
+        cublasDscal(handle, (A_rows - s), B, dev_W, 1); // W = -B[0] * V[:, 0]
 
         for (int i = 1; i < r; i++) {
             // gemv Yt_v <-- Y.T @ v
-            printf("=====  i = %d  =====\n", i);
-            printf("Y = \n");
-            print_ptr<<<1,1>>>(dev_Y, A_rows, r);
-            cudaDeviceSynchronize();
-            printf("v = \n");
-            print_ptr<<<1,1>>>((dev_Vmat + i * A_rows), A_rows, 1);
-            cudaDeviceSynchronize();
+            debug_print("=====  i = %d  =====\n", i);
+            debug_print("%s\n", "Y = ");
+            //print_ptr<<<1,1>>>(dev_Y, A_rows, r, R_rows);
+            
+            debug_print("%s\n", "v = ");
+            //print_ptr<<<1,1>>>((dev_Vmat + i * A_rows), A_rows, 1, R_rows);
+            
 
+            // Y is (A_rows - s) ==> Yt_v is A_rows - s
             stat = cublasDgemv(handle, CUBLAS_OP_T, 
                                //A_rows, r,
-                               A_rows, i,
+                               A_rows - s, i,
                                &alpha, 
                                dev_Y, A_rows,
                                //(dev_Vmat + i * A_rows), A_rows,
@@ -570,29 +614,29 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
                                &gamma,
                                dev_Yt_v, 1);
 
-            printf("Yt_v = \n");
-            print_ptr<<<1,1>>>(dev_Yt_v , r, 1);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "Yt_v = ");
+            //print_ptr<<<1,1>>>(dev_Yt_v , r, 1, R_rows);
+            
 
-            printf("W = \n");
-            print_ptr<<<1,1>>>(dev_W, A_rows, r);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "W = ");
+            //print_ptr<<<1,1>>>(dev_W, A_rows, r, R_rows);
+            
 
             // gemm WYt_v <-- -B[j] * W @ Yt_v
             stat = cublasDgemv(handle, CUBLAS_OP_N, 
-                               A_rows, i,
+                               A_rows - s, i,
                                (B + i), 
                                dev_W, A_rows,
                                dev_Yt_v, 1,
                                &gamma,
                                dev_WYt_v, 1);
 
-            printf("WYt_v = \n");
-            print_ptr<<<1,1>>>(dev_WYt_v, A_rows, 1);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "WYt_v = ");
+            //print_ptr<<<1,1>>>(dev_WYt_v, A_rows, 1, R_rows);
+            
 
             // axpy WYt_v <-- -B[j]v + WYt_v
-            stat = cublasDaxpy(handle, A_rows, 
+            stat = cublasDaxpy(handle, A_rows - s, 
                                (B + i),
                                dev_Vmat + i * A_rows, 1,
                                dev_WYt_v, 1);
@@ -600,40 +644,43 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
             // scal WYt_v <-- -B[j] * WYt_v
             //cublasDscal(handle, A_rows, (B + i), dev_WYt_v, 1);
 
-            printf("z = \n");
-            print_ptr<<<1,1>>>(dev_WYt_v, A_rows, 1);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "z = ");
+            //print_ptr<<<1,1>>>(dev_WYt_v, A_rows, 1, R_rows);
+            
 
             // memcpy Y + r*A_rows <-- v
             cudaStat = cudaMemcpy(dev_Y + i * A_rows, dev_Vmat + i * A_rows, A_rows * sizeof(double), cudaMemcpyDeviceToDevice);
             // memcpy W + r*A_rows <-- z
             cudaStat = cudaMemcpy(dev_W + i * A_rows, dev_WYt_v, A_rows * sizeof(double), cudaMemcpyDeviceToDevice);
 
-            printf("Y = \n");
-            print_ptr<<<1,1>>>(dev_Y, A_rows, r);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "Y = ");
+            //print_ptr<<<1,1>>>(dev_Y, A_rows, r, R_rows); //this was garbage somehow
+            
 
-            printf("W = \n");
-            print_ptr<<<1,1>>>(dev_W, A_rows, r);
-            cudaDeviceSynchronize();
+            debug_print("%s\n", "W = ");
+            //print_ptr<<<1,1>>>(dev_W, A_rows, r, R_rows);
+            
         }
 
-        printf("===== COMPLETED W, Y UPDATE =====\n");
+        debug_print("%s\n", "===== COMPLETED W, Y UPDATE =====");
 
-        printf("W = \n");
-        print_ptr<<<1,1>>>(dev_W, A_rows, r);
-        cudaDeviceSynchronize();
-        printf("Y = \n");
-        print_ptr<<<1,1>>>(dev_Y, A_rows, r);
-        cudaDeviceSynchronize();
+        debug_print("%s\n", "W = ");
+        //print_ptr<<<1,1>>>(dev_W, A_rows, r, R_rows);
+        
+        debug_print("%s\n", "Y = ");
+        //print_ptr<<<1,1>>>(dev_Y, A_rows, r, R_rows);
+        
 
-        printf("===== UPDATING Q,R =====\n");
+        debug_print("%s\n", "===== UPDATING Q,R =====");
 
         // Update Q, R
         // Update R
         // R[s:, s + r:] = R[s:, s + r:] + Y @ (W.T @ R[s:, s + r:])
-        // W.T is (r x R_rows). R[s: s + r:] is (R_rows - s) x (R_cols - (s + r))
+        // W.T is (r x R_rows - s). R[s: s + r:] is (R_rows - s) x (R_cols - (s + r))
         // gemm  dev_WTR <-- W.T @ (R + s + (s + r) * R_rows)
+        debug_print("%s\n", "R[s:, s + r:]");
+        //print_ptr<<<1,1>>>((dev_R + s + (s + r) * R_rows), R_rows - s, 1, R_rows);
+        
         stat = cublasDgemm(handle, 
                            CUBLAS_OP_T, CUBLAS_OP_N,
                            r, R_cols - (s + r), R_rows - s,
@@ -642,30 +689,57 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
                            (dev_R + s + (s + r) * R_rows), R_rows,
                            &gamma,
                            dev_WTR, r);
+
+        debug_print("%s\n", "dev_WTR = ");
+        //print_ptr<<<1,1>>>(dev_WTR, r, R_cols - (s + r), r);
+        
         // gemm  dev_YWTR <-- Y @ dev_WTR
-        // Y is A_rows x r
+        // Y is (A_rows - s )x r
         // dev_WTR is r x (R_cols - (s + r))
         stat = cublasDgemm(handle, 
                            CUBLAS_OP_N, CUBLAS_OP_N,
-                           A_rows, R_cols - (s + r), r,
+                           A_rows - s, R_cols - (s + r), r,
                            &alpha, 
                            dev_Y, A_rows,
                            dev_WTR, r,
                            &gamma,
                            dev_YWTR, A_rows);
 
-        // axpy  R + s + (s + r) * R_rows <-- dev_YWTR + (R + s + (s + r) * R_rows)
-        stat = cublasDaxpy(handle, A_rows * (R_cols - (s + r)), &alpha, dev_YWTR, 1, (dev_R + s + (s + r) * R_rows), 1);
+        debug_print("%s\n", "dev_YWTR");
+        ////print_ptr<<<1,1>>>(dev_YWTR, r, R_cols - (s + r), r);
+        //print_ptr<<<1,1>>>(dev_YWTR, A_rows - s, R_cols - (s + r), A_rows);
+        
 
-        printf("===== FINAL R AFTER BLOCK k = %d =====\n", k);
-        print_ptr<<<1,1>>>(dev_R, R_rows, R_cols);
-        cudaDeviceSynchronize();
+        debug_print("===== R BEFORE AXPY, k = %d =====\n", k);
+        //print_ptr<<<1,1>>>(dev_R, R_rows, R_cols, R_rows);
+        
+
+        // axpy  R + s + (s + r) * R_rows <-- dev_YWTR + (R + s + (s + r) * R_rows)
+        // This is wrong! It doesn't add submatrices!
+        //stat = cublasDaxpy(handle, (A_rows - s) * (R_cols - (s + r)), &alpha, dev_YWTR, 1, (dev_R + s + (s + r) * R_rows), 1);
+
+        // iterate over each column of submatrix, and axpy 
+
+        for (int i = 0; i < R_cols - (s + r); i++) {
+            debug_print("%s\n", "dev_R + s + (s + r) * R_rows + i * R_rows = ");
+            //print_ptr<<<1,1>>>((dev_R + s + (s + r) * R_rows + i * R_rows), A_rows - s, 1, R_rows);
+            
+            debug_print("%s\n", "dev_YWTR + i * (A_rows )");
+            //print_ptr<<<1,1>>>(dev_YWTR + i * (A_rows ), A_rows - s, 1, A_rows - s);
+            
+            stat = cublasDaxpy(handle, (A_rows - s), &alpha, dev_YWTR + i * (A_rows), 1, (dev_R + s + (s + r) * R_rows + i * R_rows), 1);
+        }
+
+
+        debug_print("===== FINAL R AFTER BLOCK k = %d =====\n", k);
+        //print_ptr<<<1,1>>>(dev_R, R_rows, R_cols, R_rows);
+        
 
         // Update Q
         // Q[:, s:] = Q[:, s:] + Q[:, s:] @ W  @ Y.T
         // gemm dev_WYT <-- W @ Y.T
         // W is (A_rows - s ) x r, Y.T is r x (A_rows - s)
-        printf("first dgemm\n");
+        debug_print("%s\n", "first dgemm");
         stat = cublasDgemm(handle,
                            CUBLAS_OP_N, CUBLAS_OP_T,
                            R_rows - s, R_rows - s, r,
@@ -675,28 +749,28 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
                            &gamma,
                            dev_WYT, R_rows);
 
-        printf("R_rows - s = %d\n", R_rows - s);
-        printf("r = %d\n", r);
-        printf("dev_W = %p\n", dev_W);
-        printf("R_rows= %d\n", R_rows);
-        printf("dev_Y = %p\n", dev_Y);
-        printf("r = %d\n", r);
-        printf("gamma = %f\n", gamma);
-        printf("dev_WYT = %p\n", dev_WYT);
-        printf("R_rows = %d\n", R_rows);
+        debug_print("R_rows - s = %d\n", R_rows - s);
+        debug_print("r = %d\n", r);
+        debug_print("dev_W = %p\n", dev_W);
+        debug_print("R_rows= %d\n", R_rows);
+        debug_print("dev_Y = %p\n", dev_Y);
+        debug_print("r = %d\n", r);
+        debug_print("gamma = %f\n", gamma);
+        debug_print("dev_WYT = %p\n", dev_WYT);
+        debug_print("R_rows = %d\n", R_rows);
         if (stat != CUBLAS_STATUS_SUCCESS) {
-            printf("stat = %s\n", _cudaGetErrorEnum(stat));
+            debug_print("stat = %s\n", _cudaGetErrorEnum(stat));
             cublasDestroy(handle);
             return EXIT_FAILURE;
         } 
-        printf("dev_WYT\n");
-        print_ptr<<<1,1>>>(dev_WYT, R_rows - s, R_rows - s);
-        cudaDeviceSynchronize();
+        debug_print("%s\n", "dev_WYT");
+        //print_ptr<<<1,1>>>(dev_WYT, R_rows - s, R_rows - s, R_rows);
+        
 
         // gemm dev_QWYT <-- (Q + s * Q_rows) @ dev_WYT
         // Q[:, s:] is A_rows x (A_rows - s)
         // dev_WYT is (A_rows - s) x (A_rows - s)
-        printf("second dgemm\n");
+        debug_print("%s\n", "second dgemm");
         stat = cublasDgemm(handle,
                            CUBLAS_OP_N, CUBLAS_OP_N,
                            A_rows, A_rows - s, A_rows - s,
@@ -708,9 +782,9 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
         // axpy (Q + s * Q_rows) <-- dev_QWYT + (Q + s * Q_rows)
         stat = cublasDaxpy(handle, Q_rows * (Q_cols - s), &alpha, dev_QWYT, 1, (dev_Q + s * Q_rows), 1);
 
-        printf("===== FINAL Q AFTER BLOCK k = %d =====\n", k);
-        print_ptr<<<1,1>>>(dev_Q, Q_rows, Q_cols);
-        cudaDeviceSynchronize();
+        debug_print("===== FINAL Q AFTER BLOCK k = %d =====\n", k);
+        //print_ptr<<<1,1>>>(dev_Q, Q_rows, Q_cols, Q_rows);
+        
 
         // R[s:, s + r:] is,  at max, R_rows x R_cols - r
     }

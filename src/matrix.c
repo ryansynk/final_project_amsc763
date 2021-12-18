@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
+#include <string.h>
 #include <time.h>
 #include <math.h>
 #include <stdbool.h>
@@ -9,6 +11,23 @@
 //TODO Transition to like, not even using the matrix struct
 //TODO Fix resource leaks
 //
+//
+
+// Parses a matrix text file into A column_ordered matrix
+int readtxt(char *fname, double *A, int A_rows, int A_cols) {
+    FILE *pf;
+    pf = fopen(fname, "r");
+    if (pf == NULL) {
+        printf("could not open file %s: %s\n", fname, strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    for (int i = 0; i < A_rows; i++) {
+        for (int j = 0; j < A_cols; j++) {
+            fscanf(pf, "%lf", &A[i + j*A_rows]);
+        }
+    }
+}
 
 
 int print_matrix(Matrix *A) {
@@ -33,7 +52,11 @@ int print_ptr(double *A, int A_rows, int A_cols) {
         //
         for (int i = 0; i < A_rows; i++) {
             for (int j = 0; j < A_cols; j++) {
-                printf("%f ", A[j*A_rows + i]);
+                if (A[j*A_rows + i] >= 0.0) {
+                    printf(" %f ", A[j*A_rows + i]);
+                } else {
+                    printf("%f ", A[j*A_rows + i]);
+                }
             }
             printf("\n");
         }
@@ -354,6 +377,34 @@ int gemv(Matrix *A, Matrix *B, Matrix *C, double alpha, double beta) {
         free_matrix(C_copy);
         return EXIT_SUCCESS;
     }
+}
+
+// Column - ordered
+int gemm_ptr(double *A, int A_rows, int A_cols,
+             double *B, int B_rows, int B_cols,
+             double *C, int C_rows, int C_cols) {
+    for (int i = 0; i < A_rows; i++) {
+        for (int j = 0; j < B_cols; j++) {
+            C[i + j * C_rows] = 0.0;
+            for (int k = 0; k < A_cols; k++) {
+                C[i + j * C_rows] += A[i + k * A_rows] * B[k + j * B_rows];
+            }
+        }
+    }
+}
+
+int axpy_ptr(int n, double *x, double *y, double *alpha) {
+    for (int i = 0; i < n; i++) {
+        y[i] = (*alpha) * x[i] + y[i];
+    }
+}
+
+int nrm2_ptr(int n, double *x, double *result) {
+    *result = 0.0;
+    for (int i = 0; i < n; i++) {
+        *result += x[i] * x[i];
+    }
+    *result = sqrt(*result);
 }
 
 // Matrix-matrix product

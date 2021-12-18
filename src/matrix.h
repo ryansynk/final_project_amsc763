@@ -11,6 +11,7 @@ typedef enum {
     MATRIX_OP_T
 } matrix_operation_t;
 
+int readtxt(char *fname, double *A, int A_rows, int A_cols);
 int print_matrix(Matrix *A);
 int print_ptr(double *A, int A_rows, int A_cols);
 int init_matrix(Matrix **A, int rows, int cols);
@@ -30,4 +31,12 @@ int gemv(Matrix *A, Matrix *x, Matrix *y, double alpha, double beta);
 int gemm(matrix_operation_t transa, matrix_operation_t transb, 
         Matrix *A, Matrix *B, Matrix *C, 
         double alpha, double beta);
+int gemm_ptr(double *A, int A_rows, int A_cols,
+             double *B, int B_rows, int B_cols,
+             double *C, int C_rows, int C_cols);
 int is_zero(Matrix *A);
+
+
+int axpy_ptr(int n, double *x, double *y, double *alpha);
+
+int nrm2_ptr(int n, double *x, double *result);

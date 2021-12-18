@@ -1,5 +1,8 @@
 import numpy as np
 import time
+import argparse
+import logging
+import sys
 
 """
 Return householder reflection vector
@@ -18,6 +21,7 @@ Factor matrix A = QR. Q unitary, R upper triangular
 r = size of block, n / r is number of blocks
 """
 def block_qr(A, r):
+    np.set_printoptions(precision=6, suppress=True,linewidth=sys.maxsize)
     m = A.shape[0]
     n = A.shape[1]
     Q = np.eye(m)
@@ -35,10 +39,10 @@ def block_qr(A, r):
             u = s + j
             print("\n")
             print("===== gpu_house =====")
-            print("R")
-            print(R)
+            #print("R")
+            #print(R)
             print("R[u:, u]")
-            print(R[u:, u])
+            print(np.array2string(np.atleast_2d(R[u:, u]).T, precision=6, separator=' '))
             print("u = " + str(u))
             v, beta = house(R[u:, u])
             print("v = ")
@@ -127,14 +131,36 @@ def block_qr(A, r):
         print(Y)
 
         # Update Q, R
-        print("===== UNDERSTANDING POTENTIAL SHAPE MISMATCH =====")
-        print("Q[:, s:].shape = " + str(Q[:, s:].shape))
-        print("W.shape" + str(W.shape))
-        print("Y.shape" + str(Y.shape))
+        print("dev_WTR = ")
+        print(W.T @ R[s:, s + r:])
+        print(W.T.shape)
+        print(R[s:, s+r:].shape)
+        print("Y @ (W.T @ R[s:, s + r:])")
+        print(Y @ (W.T @ R[s:, s + r:]))
+        print("Y")
+        print(Y)
+        print("s = " + str(s))
+        print("s + r = " + str(s + r))
+        print("R.shape = " + str(R.shape))
+        print("R[s:, s+r:]")
+        print(R[s:, s+r:])
+        print("dev_WTR = ")
+        print(W.T @ R[s:, s + r:])
+        print("dev_YWTR = ")
+        print(Y @ (W.T @ R[s:, s + r:]))
+        print("R Before AXPY")
+        print(R)
+        print("R[s:, s + r:].shape")
+        print(R[s:, s + r:].shape)
+        print("s = " + str(s))
         R[s:, s + r:] = R[s:, s + r:] + Y @ (W.T @ R[s:, s + r:])
+        print("R after update")
+        print(R[s:, s + r:])
         print("===== FINAL R AFTER BLOCK k = " + str(k) + " =====")
         print(R)
         Q[:, s:] = Q[:, s:] + Q[:, s:] @ W  @ Y.T
+        print("===== FINAL Q AFTER BLOCK k = " + str(k) + " =====")
+        print(Q)
 
     return Q, R
 
@@ -148,13 +174,7 @@ def qr(A):
     R = A.copy()
 
     for k in range(0, n):
-        print("k = " + str(k))
         v, beta = house(R[k:,k])
-        print("v = ")
-        print(v)
-        print("beta = " + str(beta))
-        #print("v.T @ R[k:m, k:n] = ")
-        #print(v.T @ R[k:m, k:n])
         R[k:m, k:n] = R[k:m, k:n] - beta * v @ (v.T @ R[k:m, k:n])
         Q[:, k:m] = Q[:, k:m] - beta * (Q[:, k:m] @ v) @ v.T
 
@@ -200,7 +220,27 @@ def test_block_qr(n_max, r):
 
     return times
 
+def deterministic_test_block_qr(A, r):
+    start = time.time()
+    Q, R = block_qr(A, r)
+    end = time.time()
+    Q_true, R_true = np.linalg.qr(A, mode='complete')
+    np.testing.assert_allclose(Q, Q_true, rtol = 1e-7, atol = 1e-7)
+    np.testing.assert_allclose(R, R_true, rtol = 1e-7, atol = 1e-7)
+    elapsed = end - start
+    print("Deterministic block_qr PASS. r = " + str(r)  + ". (m, n) = " + str(A.shape) + ". time = " + str(elapsed))
+
 def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", dest='debug', default=False, action='store_true')
+    args = parser.parse_args()
+    if (args.debug): 
+        #logging.basicConfig(stream=sys.stderr, level=logging.DEBUG)
+        logging.basicConfig(stream=sys.stderr)
+    #parser = argparse.ArgumentParser()
+    #parser.add_argument("--debug")
+    #args = parser.parse_args()
     #qr_times = test_qr(30)
     #block_qr_times = test_block_qr(11, r=3)
 
@@ -216,20 +256,21 @@ def main():
     #print("R = ")
     #print(R)
 
-    A = np.array([[0.8054398 , 0.11770048, 0.74435746, 0.07596747],
-                  [0.47612782, 0.95610043, 0.91532087, 0.73867671],
-                  [0.43006959, 0.61098952, 0.2653968 , 0.61539964],
-                  [0.90222967, 0.13762961, 0.24488956, 0.57760962],
-                  [0.08671578, 0.33511532, 0.13160944, 0.7750951 ],
-                  [0.63046399, 0.96516845, 0.95523958, 0.99198526],
-                  [0.34393792, 0.18000136, 0.95844227, 0.39069116],
-                  [0.71946612, 0.91549769, 0.6170415 , 0.35973015]])
+    #A = np.array([[0.8054398 , 0.11770048, 0.74435746, 0.07596747],
+    #              [0.47612782, 0.95610043, 0.91532087, 0.73867671],
+    #              [0.43006959, 0.61098952, 0.2653968 , 0.61539964],
+    #              [0.90222967, 0.13762961, 0.24488956, 0.57760962],
+    #              [0.08671578, 0.33511532, 0.13160944, 0.7750951 ],
+    #              [0.63046399, 0.96516845, 0.95523958, 0.99198526],
+    #              [0.34393792, 0.18000136, 0.95844227, 0.39069116],
+    #              [0.71946612, 0.91549769, 0.6170415 , 0.35973015]])
 
-    Q, R = block_qr(A, 2)
-    print("Q = ")
-    print(Q)
-    print("R = ")
-    print(R)
+    #qr_times = test_qr(30)
+    #block_qr_times = test_block_qr(11, r=3)
+    #deterministic_test_block_qr(A, 2)
+
+    A = np.loadtxt("A_matrix_8_by_4")
+    block_qr(A, 4)
 
 
 if __name__ == "__main__":
