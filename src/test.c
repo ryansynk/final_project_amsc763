@@ -6,10 +6,6 @@
 #include "test.h"
 #include "matrix.h"
 #include "qr.h"
-//#include "gpu_qr.cuh"
-
-
-//TODO Add tests for QR with non-square matrices
 
 bool assert_close(double actual, double expected, double rtol, double atol) {
     double abs_err = fabs(actual - expected);
@@ -363,19 +359,6 @@ bool test_qr(int n_max) {
 }
 
 bool test_gpu_qr() {
-    //bool result = true;
-    //int n = 10;
-    //Matrix *A = NULL;
-    //Matrix *Q = NULL;
-    //Matrix *R = NULL;
-
-    //double atol = 0.0000001;
-    //double rtol = 0.0000001;
-
-    //init_matrix(&A, 2*n, n);
-    //init_matrix(&Q, 2*n, 2*n);
-    //init_matrix(&R, 2*n, n);
-
     bool result = true;
     int n = 3;
 
@@ -404,31 +387,15 @@ bool test_gpu_qr() {
     A[4] =  0.073847; A[10] =  0.190156; A[16] = -0.787745; 
     A[5] = -0.233277; A[11] = -0.650450; A[17] = -0.508967;
 
-    //rand_ptr(A, A_rows * A_cols);
-    print_ptr(A, A_rows, A_cols);
-
     clock_t start = clock(), diff;
     gpu_qr(A, Q, R, A_rows, A_cols);
     diff = clock() - start;
     int msec = diff * 1000 / CLOCKS_PER_SEC;
-    printf("Q = \n");
-    print_ptr(Q, Q_rows, Q_cols);
-    printf("R = \n");
-    print_ptr(R, R_rows, R_cols);
-    //gemm(MATRIX_OP_N, MATRIX_OP_N, Q, R, Q, 1.0, 0.0);
-    //result = result && assert_allclose(Q, A, atol, rtol);
-
-    //if (result == true) {
-    //    printf("qr PASS for problem size: (%d, %d) in: %d milliseconds\n", A->rows, A->cols, msec);
-    //}
 
     free(A);
     free(Q);
     free(R);
 
-    //free_matrix(A);
-    //free_matrix(Q);
-    //free_matrix(R);
     return result;
 }
 
@@ -458,7 +425,6 @@ bool test_gpu_block_qr_deterministic() {
 
     A_actual = calloc(A_rows * A_cols, sizeof(double));
 
-
     A[0] = 0.8054398 ; A[8]  = 0.11770048; A[16] = 0.74435746; A[24] = 0.07596747;
     A[1] = 0.47612782; A[9]  = 0.95610043; A[17] = 0.91532087; A[25] = 0.73867671;
     A[2] = 0.43006959; A[10] = 0.61098952; A[18] = 0.2653968 ; A[26] = 0.61539964;
@@ -468,18 +434,10 @@ bool test_gpu_block_qr_deterministic() {
     A[6] = 0.34393792; A[14] = 0.18000136; A[22] = 0.95844227; A[30] = 0.39069116;
     A[7] = 0.71946612; A[15] = 0.91549769; A[23] = 0.6170415 ; A[31] = 0.35973015;
 
-    //rand_ptr(A, A_rows * A_cols);
-    //print_ptr(A, A_rows, A_cols);
-
     clock_t start = clock(), diff;
     gpu_block_qr(A, Q, R, A_rows, A_cols, r);
     diff = clock() - start;
     int msec = diff * 1000 / CLOCKS_PER_SEC;
-
-    //printf("Q = \n");
-    //print_ptr(Q, Q_rows, Q_cols);
-    //printf("R = \n");
-    //print_ptr(R, R_rows, R_cols);
 
     gemm_ptr(Q, Q_rows, Q_cols,
              R, R_rows, R_cols,
@@ -489,19 +447,11 @@ bool test_gpu_block_qr_deterministic() {
                                  A_actual, A_rows, A_cols,
                                  rtol, atol);
 
-
-    //if (result == true) {
-    //    printf("qr PASS for problem size: (%d, %d) in: %d milliseconds\n", A->rows, A->cols, msec);
-    //}
-
     free(A);
     free(Q);
     free(R);
     free(A_actual);
 
-    //free_matrix(A);
-    //free_matrix(Q);
-    //free_matrix(R);
     return result;
 }
 
@@ -531,8 +481,6 @@ bool test_gpu_block_qr_deterministic2() {
     A_actual = calloc(A_rows * A_cols, sizeof(double));
 
     readtxt("A_matrix_18_by_9", A, A_rows, A_cols);
-    //rand_ptr(A, A_rows * A_cols);
-    //print_ptr(A, A_rows, A_cols);
 
     clock_t start = clock(), diff;
     gpu_block_qr(A, Q, R, A_rows, A_cols, r);
@@ -580,8 +528,6 @@ bool test_gpu_block_qr_deterministic3() {
     A_actual = calloc(A_rows * A_cols, sizeof(double));
 
     readtxt("A_matrix_20_by_10", A, A_rows, A_cols);
-    //rand_ptr(A, A_rows * A_cols);
-    //print_ptr(A, A_rows, A_cols);
 
     clock_t start = clock(), diff;
     gpu_block_qr(A, Q, R, A_rows, A_cols, r);
@@ -632,8 +578,6 @@ bool test_gpu_block_qr_deterministic4() {
     A_actual = calloc(A_rows * A_cols, sizeof(double));
 
     readtxt("A_matrix_8_by_4", A, A_rows, A_cols);
-    //rand_ptr(A, A_rows * A_cols);
-    //print_ptr(A, A_rows, A_cols);
 
     clock_t start = clock(), diff;
     gpu_block_qr(A, Q, R, A_rows, A_cols, r);
@@ -647,8 +591,6 @@ bool test_gpu_block_qr_deterministic4() {
     result = assert_allclose_ptr(A, A_rows, A_cols,
                                  A_actual, A_rows, A_cols,
                                  rtol, atol);
-    printf("A = \n");
-    print_ptr(A, A_rows, A_cols);
     free(A);
     free(Q);
     free(R);
@@ -774,11 +716,11 @@ int main() {
         printf("test_qr: Test FAILED\n");
     }
 
-    //if (test_gpu_qr()) {
-    //    printf("test_gpu_qr: Test PASSED\n");
-    //} else {
-    //    printf("test_gpu_qr: Test FAILED\n");
-    //}
+    if (test_gpu_qr()) {
+        printf("test_gpu_qr: Test PASSED\n");
+    } else {
+        printf("test_gpu_qr: Test FAILED\n");
+    }
 
     if (test_gpu_block_qr_deterministic()) {
         printf("test_gpu_block_qr_deterministic: Test PASSED\n");
@@ -803,6 +745,7 @@ int main() {
     } else {
         printf("test_gpu_block_qr_deterministic4: Test FAILED\n");
     }
+
     double *time_output = NULL;
     if (test_gpu_block_qr(10, &time_output)) {
         printf("test_gpu_block_qr: Test PASSED\n");
