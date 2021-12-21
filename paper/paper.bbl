@@ -1,0 +1,33 @@
+\begin{thebibliography}{1}
+
+\bibitem{10.1145/1513895.1513904}
+A.~Kerr, D.~Campbell, and M.~Richards, ``Qr decomposition on gpus,'' in {\em
+  Proceedings of 2nd Workshop on General Purpose Processing on Graphics
+  Processing Units}, GPGPU-2, (New York, NY, USA), p.~71–78, Association for
+  Computing Machinery, 2009.
+
+\bibitem{volta_blogpost}
+L.~Durant, O.~Giroux, M.~Harris, and N.~Stam, ``Inside volta: The world’s
+  most advanced data center gpu.''
+  \url{https://developer.nvidia.com/blog/inside-volta/}.
+\newblock Accessed: 2021-12-20.
+
+\bibitem{10.1145/582034.582089}
+E.~S. Larsen and D.~McAllister, ``Fast matrix multiplies using graphics
+  hardware,'' in {\em Proceedings of the 2001 ACM/IEEE Conference on
+  Supercomputing}, SC '01, (New York, NY, USA), p.~55, Association for
+  Computing Machinery, 2001.
+
+\bibitem{1559955}
+N.~Galoppo, N.~Govindaraju, M.~Henson, and D.~Manocha, ``Lu-gpu: Efficient
+  algorithms for solving dense linear systems on graphics hardware,'' in {\em
+  SC '05: Proceedings of the 2005 ACM/IEEE Conference on Supercomputing},
+  pp.~3--3, 2005.
+
+\bibitem{frontier}
+https://www.olcf.ornl.gov/frontier, 2019.
+
+\bibitem{cublas}
+{NVIDIA Corporation}, ``Cublas.''
+
+\end{thebibliography}

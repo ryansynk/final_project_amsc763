@@ -1,0 +1,117 @@
+@inproceedings{10.1145/1513895.1513904,
+author = {Kerr, Andrew and Campbell, Dan and Richards, Mark},
+title = {QR Decomposition on GPUs},
+year = {2009},
+isbn = {9781605585178},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1513895.1513904},
+doi = {10.1145/1513895.1513904},
+abstract = {QR decomposition is a computationally intensive linear algebra operation that factors a matrix A into the product of a unitary matrix Q and upper triangular matrix R. Adaptive systems commonly employ QR decomposition to solve overdetermined least squares problems. Performance of QR decomposition is typically the crucial factor limiting problem sizes.Graphics Processing Units (GPUs) are high-performance processors capable of executing hundreds of floating point operations in parallel. As commodity accelerators for 3D graphics, GPUs offer tremendous computational performance at relatively low costs. While GPUs are favorable to applications with much inherent parallelism requiring coarse-grain synchronization between processors, methods for efficiently utilizing GPUs for algorithms computing QR decomposition remain elusive.In this paper, we discuss the architectural characteristics of GPUs and explain how a high-performance implementation of QR decomposition may be implemented. We provide detailed performance analysis of the resulting implementation for real-valued matrices and offer recommendations for achieving high performance to future developers of dense linear algebra procedures for GPUs. Our implementation sustains 143 GFLOP/s, and we believe this is the fastest announced QR implementation executing entirely on the GPU.},
+booktitle = {Proceedings of 2nd Workshop on General Purpose Processing on Graphics Processing Units},
+pages = {71–78},
+numpages = {8},
+location = {Washington, D.C., USA},
+series = {GPGPU-2}
+}
+
+@article{osti_6535818,
+title = {The WY representation for products of householder matrices},
+author = {Bischof, C and Van Loan, C},
+abstractNote = {A new way to represent products of Householder matrices is given that makes a typical Householder matrix algorithm rich in matrix-matrix multiplication. This is very desirable in that matrix-matrix multiplication is the operation of choice for an increasing number of important high performance computers. The authors tested the new representation by using it to compute the QR factorization on the FPS-164/MAX. Preliminary results indicate that it is a very efficient way to organize Householder computations.},
+doi = {10.1137/0908009},
+url = {https://www.osti.gov/biblio/6535818}, 
+journal = {SIAM J. Sci. Stat. Comput.; (United States)},
+volume = {8:1},
+place = {United States},
+year = {1987},
+month = {1}
+} 
+
+@inproceedings{Larsen:2001:FMM:582034.582089,
+ author = {Larsen, E. Scott and McAllister, David},
+ title = {Fast Matrix Multiplies Using Graphics Hardware},
+ booktitle = {Proceedings of the 2001 ACM/IEEE Conference on Supercomputing},
+ series = {SC '01},
+ year = {2001},
+ isbn = {1-58113-293-X},
+ location = {Denver, Colorado},
+ pages = {55--55},
+ numpages = {1},
+ url = {http://doi.acm.org/10.1145/582034.582089},
+ doi = {10.1145/582034.582089},
+ acmid = {582089},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+ keywords = {graphics hardware, matrix multiplication},
+} 
+
+@misc{frontier, 
+ journal = {Frontier Specs}, 
+ howpublished = {https://www.olcf.ornl.gov/frontier}, 
+ publisher = {Oak Ridge National Lab},
+ year = {2019}
+}
+
+@inproceedings{Fatahalian:2004:UEG:1058129.1058148,
+ author = {Fatahalian, K. and Sugerman, J. and Hanrahan, P.},
+ title = {Understanding the Efficiency of GPU Algorithms for Matrix-matrix Multiplication},
+ booktitle = {Proceedings of the ACM SIGGRAPH/EUROGRAPHICS Conference on Graphics Hardware},
+ series = {HWWS '04},
+ year = {2004},
+ isbn = {3-905673-15-0},
+ location = {Grenoble, France},
+ pages = {133--137},
+ numpages = {5},
+ url = {http://doi.acm.org/10.1145/1058129.1058148},
+ doi = {10.1145/1058129.1058148},
+ acmid = {1058148},
+ publisher = {ACM},
+ address = {New York, NY, USA},
+}
+
+
+@inproceedings{10.1145/582034.582089,
+ author = {Larsen, E. Scott and McAllister, David},
+ title = {Fast Matrix Multiplies Using Graphics Hardware},
+ year = {2001},
+ isbn = {158113293X},
+ publisher = {Association for Computing Machinery},
+ address = {New York, NY, USA},
+ url = {https://doi.org/10.1145/582034.582089},
+ doi = {10.1145/582034.582089},
+ abstract = {We present a technique for large matrix-matrix multiplies using low cost graphics hardware. The result is computed by literally visualizing the computations of a simple parallel processing algorithm. Current graphics hardware technology has limited precision and thus limits immediate applicability of our algorithm. We include results demonstrating proof of concept, correctness, speedup, and a simple application. This is therefore forward looking research: a technique ready for technology on the horizon.},
+ booktitle = {Proceedings of the 2001 ACM/IEEE Conference on Supercomputing},
+ pages = {55},
+ numpages = {1},
+ keywords = {graphics hardware, matrix multiplication},
+ location = {Denver, Colorado},
+ series = {SC '01}
+}
+
+  
+@INPROCEEDINGS{1559955,
+  author={Galoppo, N. and Govindaraju, N.K. and Henson, M. and Manocha, D.},
+  booktitle={SC '05: Proceedings of the 2005 ACM/IEEE Conference on Supercomputing}, 
+  title={LU-GPU: Efficient Algorithms for Solving Dense Linear Systems on Graphics Hardware}, 
+  year={2005},
+  volume={},
+  number={},
+  pages={3-3},
+  doi={10.1109/SC.2005.42}}
+}
+
+@misc{cublas,
+  author = {{NVIDIA Corporation}},
+  title = {CuBLAS},
+  url = {https://developer.nvidia.com/cublas},
+  version = {},
+  date = {},
+}
+
+@misc{volta_blogpost,
+  title = {Inside Volta: The World’s Most Advanced Data Center GPU},
+  howpublished = {\url{https://developer.nvidia.com/blog/inside-volta/}},
+  note = {Accessed: 2021-12-20},
+  author = {Durant, L. and Giroux, O. and Harris, M and Stam, N},
+}
