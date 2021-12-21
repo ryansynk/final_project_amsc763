@@ -106,7 +106,24 @@ Importantly, the $P$ matrices don't need to be fully formed. If we define $\beta
     &= A - \beta_k v_k (A^{T} v_k)
 \end{flalign*}
 
-So we can perform a rank-one update to $A$ at each iteration.
+So we can perform a rank-one update to $A$ at each iteration. We can string these updates
+together, and, since each of the $P_k$ transformations are unitary, we preserve the original
+matrix:
+\[
+    A = (P_1^{T}P_2^{T}\dots P_k^{T})(P_k \dots P_2 P_1)A
+\] 
+
+And our QR decomposition is 
+\begin{flalign*}
+    Q &= (P_1^{T} P_2^{T}\dots P_{n-1}^{T}) \\
+    R &= (P_{n-1} \dots P_2 P_1 A)
+\end{flalign*}
+
+So at each iteration, we make the following updates:
+\begin{flalign*}
+    R &\leftarrow (I - \beta_k v_k v_k^{T}) R \\
+    Q &\leftarrow Q(I - \beta_K v_k v_k^{T})
+\end{flalign*}
 
 Putting this together gives the following $QR$ algorithm:
 
@@ -126,19 +143,95 @@ Putting this together gives the following $QR$ algorithm:
 
 This $QR$ algorithm works well, but for our purposes it will require some modification
 to run quickly on a GPU.
-\par\null\par
-TODO:
-\begin{enumerate}
-    \item Explain how to update Q in basic QR
-    \item Explain how chaining together $P$ matrices gives $QR$ 
-\end{enumerate}
 
 \section*{Algorithm}
-\begin{enumerate}
-    \item Explanation of why regular QR doesn't work as well (maybe cite a figure)
-    \item Explanation of block QR update (W, Y matrices)
-    \item Explanation of full block QR algorithm
-\end{enumerate}
+As was mentioned before, GPUs can offer speedups to many different problems. However,
+given the physical distance between host memory and the GPU, there is a nontrivial cost
+in moving data from the CPU to the GPU. In many problems, the data in question is 
+small enough to fit onto CPU cache, and thus can be done in the time it takes to 
+move the data onto the GPU itself. Care must be taken in writing GPU code to make sure
+that, when possible, all data that is moved onto the GPU stays on the GPU for the duration
+of the the computation. And, before writing any code, the size of the problem in 
+question should be examined to ensure that a GPU will offer an increased effiency.
+In this way, GPUs will offer much greater speedups in computing $QR$ factorizations 
+for \textbf{large} matrices, and our algorithm is tailored around that idea.
+
+Additionally, when data is on the GPU, in order to maximize efficiency, as many computations
+as possible should be performed in parallel. In this way,... As \cite{10.1145/1513895.1513904}
+states, in the above algorithm, "the amount of computation per memory element fetched 
+from global memory is quite low." Currently, the algorithm... So if we want to take advantage
+of the speedups that a GPU has to offer, we will have to give the GPU a sufficient amount of 
+work to do. In this way, we'd like to transition our computation from operating solely in
+terms of matrix-vector products, and shift it to focusing on matrix-matrix products.
+
+It is with this in mind that we turn to a 1985 result of Bischof and Van Loan
+\cite{osti_6535818}. They showed that applying a series of rank-1 updates
+\begin{flalign*}
+    P &= P_1 P_2 \dots P_r \\
+      &= (I - \beta_1 v_1 v_1^{T}) \dots (I - \beta_r v_r v_r^{T})
+\end{flalign*}
+Is equivalent to applying a rank-r update of the following form:
+\begin{flalign*}
+    P_{wy} &= P_1 P_2 \dots P_r \\
+           &= I + YW^{T}
+\end{flalign*}
+For $m\times r$ matrices $W$ and $Y$, which are constructed from the vectors and scalars
+$(\beta_i, v_i)$. Their construction is outlined in the following algorithm:
+
+\begin{algorithm}
+\caption{Construction of $W$, $Y$ matrices}\label{alg:wy}
+\begin{algorithmic}
+\State Given $v_1 \in \mathbb{R}^{n}, v_2 \in \mathbb{R}^{n-1} \dots v_r \in \mathbb{R}^{n - r + 1}$
+\State Given $\beta_1, \dots \beta_r \in \mathbb{R}$
+\State $Y = v_1$
+\State $W = -\beta_1 * v_1$
+    \For{$j = 2:r$}
+    \State $z = -\beta_j v_j - \beta_j WY^{T} v_j$
+    \State $W = [W z]$
+    \State $Y = [Y v]$
+    \EndFor
+\end{algorithmic}
+\end{algorithm}
+
+So, given some set of $r$ Householder updates, we can generate matrices $W$ and $Y$ to
+update the rest of our matrix with. This motivates Kerr et. al's Block Householder algorithm.
+We first partition our matrix $A$ into block matrices of size $m \times r$:
+\[
+    A = \begin{pmatrix} 
+            A_1 & A_2 & \dots & A_{\frac{n}{r}} 
+        \end{pmatrix}
+\] 
+
+For a given block $A_k$, we compute the necessary $r$ Householder updates, and zero out the
+proper entries below the main diagonal in that block, giving us $v_1, \dots v_r$ and 
+$\beta_1 \dots \beta_r$. Instead of updating the rest of the matrix using each individual
+$v_i$, we instead form the matrices $W_k$ and $Y_k$, and update $A_{k+1}, \dots, A_{\frac{n}{r}}$ 
+by multiplying each by $I + Y_kW_k^{T}$. This process is repeated over all blocks, until
+$Q$ and $R$ are formed. This gives us the following algorithm:
+
+\begin{algorithm}[H]
+\caption{Block Householder QR}\label{alg:block_qr}
+\begin{algorithmic}[1]
+    \State Given $A \in \mathbb{R}^{m\times n}$, $r\in \{1,\dots, n\}$ Partition $A = \left[A_1 \dots A_{\frac{n}{r}} \right]$
+    \For{$k = 1$ to  $n/r$} \Comment{Loop over all blocks}
+    \State $s = (k - 1) r + 1$ \Comment{index of first column of $A_k$} 
+        \For{$j = 1$ to  $r$} \Comment{Loop over each column in block}
+        \State $u = s + j - 1$ \Comment{index of $j^{th}$ column of $A_k$}
+        \State $[v_j, \beta_j] = \mathbf{house}(A[u:m, u])$
+        \State $A_k \gets (I - \beta_j v_j v_j^{T})A_k$
+        \State $V[:, j] \gets v_j$
+        \State $B[j] \gets \beta_j$
+        \EndFor
+        \State $W, Y = \mathbf{constructWY}(V, B)$
+        \State $[A_{k + 1} \dots A_{n / r}] \gets (I + YW^{T})[A_{k+1}\dots A_{n/r}]$ 
+        \State $Q \gets Q(I + WY^{T})$
+    \EndFor
+\end{algorithmic}
+\end{algorithm}
+
+As a small aside, the matrix $V$ is  $m \times r$, while the vector  $v_j$ is in 
+$\mathbb{R}^{m - u}$. So implicitly during the step $V[:,j]\gets v_j$ on line 8, the vector $v_j$ is
+first padded with zeros at the top.
 
 \section*{Implementation}
 
@@ -155,28 +248,50 @@ Since the release of CUDA in 2007, NVIDIA has written a number of libraries and 
 a variety of GPU applications. One of the earliest they released was a library named 
 CuBLAS \cite{cublas}. The CuBLAS library adheres to the Basic Linear Algebra Subprograms (BLAS) 
 API, and allows for users to call functions like \texttt{cublasDgemm}: CuBLAS 
-double-precision general matrix-matrix multiply. Rather than writing all of the .... a 
-programmer can use CuBLAS and call their kernels to multiply matrices and vectors together.
+double-precision general matrix-matrix multiply. Rather than writing all of the kernels
+for the block  $QR$ algorithm by hand, this implementation makes use of the pre-written
+CuBLAS calls to perform matrix-matrix and matrix-vector multiplications.
 
 In the QR implementation, almost all of the kernels launched were calls to the CuBLAS API,
 with the exception of the computation of the Householder $[v, \beta]$ values, which was 
 written seperately.
-\par\null\par
-TODO:
+
+Kerr's original paper set the $r$ value parameter (size of each block) to be 64. They
+mention in the paper that "r should be chosen to minimize total runtime on the target
+architecture." In experiments, the code ran slightly faster with higher values, of 128 and 256.
+Experiments for varying $r$ levels are shown below.
+
+In the original implementation, Kerr et. al did not use the CuBLAS kernel for 
+matrix-vector multiply. They cited the fact that their own implementation could 
+achieve a speedup over the CUDA implementation. For the purposes of this report, 
+an original \texttt{gemv} (generalized matrix-vector multiply) kernel was not given. 
+This has not been tested, but there is a good chance that in the 12 years since the
+publication of Kerr's paper, NVIDIA has since tuned their CuBLAS library to be very
+performant --- CuBLAS had only existed for a couple years at the time of their publication.
+
+All code for the project can be found in the following github repository: 
+\url{https://github.com/ryansynk/final_project_amsc763}. Along with a 
+CUDA/C implementation of the block QR algorithm, the following were also
+implemented along the way:
 \begin{enumerate}
-    \item Finish discussing CuBLAS
-    \item Discuss $r$ value chosen
-    \item Discuss difference between my implementation and the papers
+    \item A python (serial/CPU) implementation of non-blocked Householder QR
+    \item A python (serial/CPU) implementation of blocked Householder QR
+    \item A C/CUDA (GPU) implementation of non-blocked Householder QR
+    \item A C (serial/CPU) implementation of non-blocked Householder QR
 \end{enumerate}
+
+\par\null\par
 
 \section*{Results}
 \par\null\par
 TODO:
 \begin{enumerate}
+    \item Description of hardware tests are ran on.
+    \item Plot of time for varying sizes of $r$.
     \item Plot of theoretical peak double precision performance on GPU versus
         actual implementation
     \item Plot of Python CPU versus C++ GPU plot (time)
-    \item Plot of their results vs  mine
+    \item Plot of their results vs mine
 \end{enumerate}
 
 \section*{Conclusion}

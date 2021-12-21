@@ -27,6 +27,11 @@ N.~Galoppo, N.~Govindaraju, M.~Henson, and D.~Manocha, ``Lu-gpu: Efficient
 \bibitem{frontier}
 https://www.olcf.ornl.gov/frontier, 2019.
 
+\bibitem{osti_6535818}
+C.~Bischof and C.~Van~Loan, ``The wy representation for products of householder
+  matrices,'' {\em SIAM J. Sci. Stat. Comput.; (United States)}, vol.~8:1, 1
+  1987.
+
 \bibitem{cublas}
 {NVIDIA Corporation}, ``Cublas.''
 
