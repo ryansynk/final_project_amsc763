@@ -605,12 +605,13 @@ bool test_gpu_block_qr(int n_max, double **time_output) {
     double rtol = 0.00001;
     clock_t start, end;
     double *times = malloc(n_max * sizeof(double));
-    double time, avg_time;
-    //int r =  64;
-    int r = 256;
+    //double time, avg_time;
+    float time;
+    int r =  64;
+    //int r = 256;
 
-    for (int i = 4; i < n_max + 1; i++) {
-        int n = i * 64;
+    for (int i = 1; i < n_max + 1; i++) {
+        int n = i * 64 * 5;
         int A_rows = 2*n;
         int A_cols = n;
         int Q_rows = A_rows;
@@ -630,13 +631,13 @@ bool test_gpu_block_qr(int n_max, double **time_output) {
 
         rand_ptr(A, A_rows * A_cols);
 
-        avg_time = 0;
-        for (int k = 0; k < 5; k++) {
+        //for (int k = 0; k < 5; k++) {
+        time = 0.0;
             start = clock();
-            gpu_block_qr(A, Q, R, A_rows, A_cols, r);
+            gpu_block_qr(A, Q, R, A_rows, A_cols, r, &time);
             end = clock();
             time = ((double)(end - start)) / CLOCKS_PER_SEC;
-            avg_time += time;
+            //avg_time += time;
 
             gemm_ptr(Q, Q_rows, Q_cols,
                      R, R_rows, R_cols,
@@ -659,10 +660,11 @@ bool test_gpu_block_qr(int n_max, double **time_output) {
                 printf("RELATIVE ERROR = %f\n", rel_err);
                 return false;
             }
-        }   
+        //}   
 
-        times[i - 1] = avg_time / 5.0;
-        printf("Block QR PASS for size (%d, %d) in time = %lf\n", A_rows, A_cols, times[i - 1]);
+        //times[i - 1] = avg_time / 5.0;
+        //printf("Block QR PASS for size (%d, %d) in time = %lf\n", A_rows, A_cols, times[i - 1]);
+        printf("Block QR PASS for size (%d, %d) in time = %f\n", A_rows, A_cols, time);
 
         free(A);
         free(Q);
@@ -722,32 +724,32 @@ int main() {
         printf("test_gpu_qr: Test FAILED\n");
     }
 
-    if (test_gpu_block_qr_deterministic()) {
-        printf("test_gpu_block_qr_deterministic: Test PASSED\n");
-    } else {
-        printf("test_gpu_block_qr_deterministic: Test FAILED\n");
-    }
+    //if (test_gpu_block_qr_deterministic()) {
+    //    printf("test_gpu_block_qr_deterministic: Test PASSED\n");
+    //} else {
+    //    printf("test_gpu_block_qr_deterministic: Test FAILED\n");
+    //}
 
-    if (test_gpu_block_qr_deterministic2()) {
-        printf("test_gpu_block_qr_deterministic2: Test PASSED\n");
-    } else {
-        printf("test_gpu_block_qr_deterministic2: Test FAILED\n");
-    }
+    //if (test_gpu_block_qr_deterministic2()) {
+    //    printf("test_gpu_block_qr_deterministic2: Test PASSED\n");
+    //} else {
+    //    printf("test_gpu_block_qr_deterministic2: Test FAILED\n");
+    //}
 
-    if (test_gpu_block_qr_deterministic3()) {
-        printf("test_gpu_block_qr_deterministic3: Test PASSED\n");
-    } else {
-        printf("test_gpu_block_qr_deterministic3: Test FAILED\n");
-    }
+    //if (test_gpu_block_qr_deterministic3()) {
+    //    printf("test_gpu_block_qr_deterministic3: Test PASSED\n");
+    //} else {
+    //    printf("test_gpu_block_qr_deterministic3: Test FAILED\n");
+    //}
 
-    if (test_gpu_block_qr_deterministic4()) {
-        printf("test_gpu_block_qr_deterministic4: Test PASSED\n");
-    } else {
-        printf("test_gpu_block_qr_deterministic4: Test FAILED\n");
-    }
+    //if (test_gpu_block_qr_deterministic4()) {
+    //    printf("test_gpu_block_qr_deterministic4: Test PASSED\n");
+    //} else {
+    //    printf("test_gpu_block_qr_deterministic4: Test FAILED\n");
+    //}
 
     double *time_output = NULL;
-    if (test_gpu_block_qr(10, &time_output)) {
+    if (test_gpu_block_qr(4, &time_output)) {
         printf("test_gpu_block_qr: Test PASSED\n");
     } else {
         printf("test_gpu_block_qr: Test FAILED\n");

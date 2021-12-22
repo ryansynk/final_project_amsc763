@@ -31,136 +31,29 @@ def block_qr(A, r):
     B = np.zeros(r)
 
     for k in range(0, int(n / r)): # Loops over all blocks
-        print("k = " + str(k))
         s = k * r
         V = np.zeros([m - s, r])
         for j in range(0, r): # Loops over every column in a block
-            print("j = " + str(j))
             u = s + j
-            print("\n")
-            print("===== gpu_house =====")
-            #print("R")
-            #print(R)
-            print("R[u:, u]")
-            print(np.array2string(np.atleast_2d(R[u:, u]).T, precision=6, separator=' '))
-            print("u = " + str(u))
             v, beta = house(R[u:, u])
-            print("v = ")
-            print(v)
-            print("beta = " + str(beta))
-
-            print("\n")
-            print("===== cublasDgemv =====")
-
-            print("R = ")
-            print(R)
-            print("R[u:m, u:(s + r)]")
-            print(R[u:m, u:(s + r)])
-
-            print("v")
-            print(v)
-
-            print("v.T @ R[u:m, u:(s + r)] = ")
-            print(v.T @ R[u:m, u:(s + r)])
-
-            print("\n")
-            print("===== cublasDger =====")
-            print("v")
-            print(v)
-
-            print("v.T @ R[u:m, u:(s + r)] = ")
-            print(v.T @ R[u:m, u:(s + r)])
-
-            print("B[j]")
-            print(beta)
-
-            print("rows = " + str(R[u:m, u:(s + r)].shape[0]) + ", cols = " + str(R[u:m, u:(s + r)].shape[1]))
-
-            print("R[u:m, u:(s + r)] - beta * v @ (v.T @ R[u:m, u:(s + r)])")
-            print(R[u:m, u:(s + r)] - beta * v @ (v.T @ R[u:m, u:(s + r)]))
-
             R[u:m, u:(s + r)] = R[u:m, u:(s + r)] - beta * v @ (v.T @ R[u:m, u:(s + r)])
-
             v_zero_pad = np.zeros([m - s, 1])
             v_zero_pad[(m - s - v.shape[0]):m, :] = v
             V[:, j] = v_zero_pad[:, 0]
             B[j] = beta
 
-            print("===== R at end of j loop =====")
-            print(R)
-
-        #print("R[s:m, s:(s + r)] = ")
-        #print(R[s:m, s:(s + r)])
-
-        #print("V_mat = ")
-        #print(V)
-
-        #print("B = ")
-        #print(B)
-
         # Generate matrices W, Y such that P = I - W @ Y.T
-        print("===== GENERATING W, Y =====")
         Y = np.atleast_2d(V[:,0]).T
         W = -B[0] * np.atleast_2d(V[:, 0]).T
         for j in range(1, r):
-            print("=====  i = " + str(j) + "  =====")
             v = np.atleast_2d(V[:, j]).T
-            print("Y = ")
-            print(Y)
-            print("v = ")
-            print(v)
-            print("Y.T @ v")
-            print(Y.T @ v)
-            print("W")
-            print(W)
-            print("WYt_v = -B[j] * (W @ (Y.T @ v))")
-            print(-B[j] * (W @ (Y.T @ v)))
             z = -B[j] * v - B[j] * W @ (Y.T @ v)
-            print("z = ")
-            print(z)
             W = np.hstack((W, z))
             Y = np.hstack((Y, v))
-            print("Y")
-            print(Y)
-            print("W")
-            print(W)
-        print("===== COMPLETED W, Y UPDATE =====")
-        print("W = ")
-        print(W)
-        print("Y = ")
-        print(Y)
 
         # Update Q, R
-        print("dev_WTR = ")
-        print(W.T @ R[s:, s + r:])
-        print(W.T.shape)
-        print(R[s:, s+r:].shape)
-        print("Y @ (W.T @ R[s:, s + r:])")
-        print(Y @ (W.T @ R[s:, s + r:]))
-        print("Y")
-        print(Y)
-        print("s = " + str(s))
-        print("s + r = " + str(s + r))
-        print("R.shape = " + str(R.shape))
-        print("R[s:, s+r:]")
-        print(R[s:, s+r:])
-        print("dev_WTR = ")
-        print(W.T @ R[s:, s + r:])
-        print("dev_YWTR = ")
-        print(Y @ (W.T @ R[s:, s + r:]))
-        print("R Before AXPY")
-        print(R)
-        print("R[s:, s + r:].shape")
-        print(R[s:, s + r:].shape)
-        print("s = " + str(s))
         R[s:, s + r:] = R[s:, s + r:] + Y @ (W.T @ R[s:, s + r:])
-        print("R after update")
-        print(R[s:, s + r:])
-        print("===== FINAL R AFTER BLOCK k = " + str(k) + " =====")
-        print(R)
         Q[:, s:] = Q[:, s:] + Q[:, s:] @ W  @ Y.T
-        print("===== FINAL Q AFTER BLOCK k = " + str(k) + " =====")
-        print(Q)
 
     return Q, R
 
@@ -207,7 +100,8 @@ def test_qr(n_max):
 def test_block_qr(n_max, r):
     times = []
     for i in range(1, n_max):
-        n = 30*i
+        #n = 30*i
+        n = i * 64 * 5
         A = gen_matrix(n)
         start = time.time()
         Q, R = block_qr(A, r)
@@ -266,11 +160,11 @@ def main():
     #              [0.71946612, 0.91549769, 0.6170415 , 0.35973015]])
 
     #qr_times = test_qr(30)
-    #block_qr_times = test_block_qr(11, r=3)
+    block_qr_times = test_block_qr(14, r=64)
     #deterministic_test_block_qr(A, 2)
 
-    A = np.loadtxt("A_matrix_8_by_4")
-    block_qr(A, 4)
+    #A = np.loadtxt("A_matrix_8_by_4")
+    #block_qr(A, 4)
 
 
 if __name__ == "__main__":

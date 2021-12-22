@@ -93,6 +93,10 @@ __global__ void gpu_house(cublasHandle_t handle, int k, int rows, int cols, doub
 // extern "C"
 //int gpu_qr(Matrix *A, Matrix *Q, Matrix *R, int A_rows, int A_cols) {
 extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
     int status = EXIT_SUCCESS;
     if (A == NULL || Q == NULL || R == NULL) {
         status = EXIT_FAILURE;
@@ -275,7 +279,11 @@ extern "C" int gpu_qr(double *A, double *Q, double *R, int A_rows, int A_cols) {
 }
 
 
-extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_cols, int r) {
+extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_cols, int r, float *time) {
+    cudaEvent_t start, stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
+
     int status = EXIT_SUCCESS;
     if (A == NULL || Q == NULL || R == NULL) {
         status = EXIT_FAILURE;
@@ -380,6 +388,8 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
         debug_print("%s\n", "host to device memory copy failed");
         return EXIT_FAILURE;
     }
+
+    cudaEventRecord(start);
 
     for (int k = 0; k < (A_cols / r); k++) {
         debug_print("k = %d\n", k);
@@ -515,6 +525,9 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
         stat = cublasDaxpy(handle, Q_rows * (Q_cols - s), &alpha, dev_QWYT, 1, (dev_Q + s * Q_rows), 1);
     }
 
+    cudaEventRecord(stop);
+    cudaEventSynchronize(stop);
+
     cudaStat = cudaMemcpy(A, dev_A, A_rows * A_cols * sizeof(double), cudaMemcpyDeviceToHost);
     cudaStat = cudaMemcpy(Q, dev_Q, Q_rows * Q_cols * sizeof(double), cudaMemcpyDeviceToHost);
     cudaStat = cudaMemcpy(R, dev_R, R_rows * R_cols * sizeof(double), cudaMemcpyDeviceToHost);
@@ -525,5 +538,9 @@ extern "C" int gpu_block_qr(double *A, double *Q, double *R, int A_rows, int A_c
     cudaFree(dev_x);
     cudaFree(dev_Rv);
     cublasDestroy(handle);
+
+    float milliseconds = 0.0;
+    cudaEventElapsedTime(&milliseconds, start, stop);
+    *time = (milliseconds / 1000.0);
     return status;
 }

@@ -1,13 +1,13 @@
 # Fdb version 3
-["bibtex paper"] 1640114445 "paper.aux" "paper.bbl" "paper" 1640115576
+["bibtex paper"] 1640136213 "paper.aux" "paper.bbl" "paper" 1640136371
   "/usr/share/texlive/texmf-dist/bibtex/bst/base/ieeetr.bst" 1480098433 18361 1a00e58565e7f19bf2b3e1bfb82254ae ""
   "citations.bib" 1640105796 5972 2c132c4bdda6d94812423efa180919b6 ""
-  "paper.aux" 1640115576 1258 480337c60a1893dff3c7f0d9286f971e ""
+  "paper.aux" 1640136371 1423 c16e8d793dbae1d5d8c49342e26363a6 ""
   "paper.bcf" 0 -1 0 ""
   (generated)
   "paper.bbl"
   "paper.blg"
-["pdflatex"] 1640115576 "paper.tex" "paper.pdf" "paper" 1640115576
+["pdflatex"] 1640136370 "paper.tex" "paper.pdf" "paper" 1640136371
   "/etc/texmf/web2c/texmf.cnf" 1581389469 475 c0e671620eb5563b2130f56340a5fde8 ""
   "/usr/share/texlive/texmf-dist/fonts/map/fontname/texfonts.map" 1511824771 3332 103109f5612ad95229751940c61aada0 ""
   "/usr/share/texlive/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1480098698 1004 54797486969f23fa377b128694d548df ""
@@ -95,11 +95,12 @@
   "/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map" 1640106686 2700761 ac0584cc9514ab21918550a6948c4ee2 ""
   "/var/lib/texmf/web2c/pdftex/pdflatex.fmt" 1640106704 4129528 c61c3f2dd654cabb7fd2cd34dcfbf0df ""
   "gpu_diagram.png" 1640105796 1266705 ba5d9964fbd7f5da3e47d40289f0e681 ""
-  "paper.aux" 1640115576 1258 480337c60a1893dff3c7f0d9286f971e ""
-  "paper.bbl" 1640114445 1409 63121900469a3b23fb16f427e6cdfd90 "bibtex paper"
-  "paper.tex" 1640115574 14713 d7fc2f9e0570fbab78a2a10e272be796 ""
+  "paper.aux" 1640136371 1423 c16e8d793dbae1d5d8c49342e26363a6 ""
+  "paper.bbl" 1640136213 1409 63121900469a3b23fb16f427e6cdfd90 "bibtex paper"
+  "paper.tex" 1640136370 16527 cee1e22b3571fd595e699bb287e7c007 ""
+  "python_cpu_size_v_runtime_and_gpu.png" 1640134299 30269 8ccf5f0d00315c40f29ecc77d212cb81 ""
   "qr_diagram.png" 1640105796 29926 e9f981797c40c37dc5874a43765a65f2 ""
   (generated)
-  "paper.pdf"
   "paper.log"
+  "paper.pdf"
   "paper.aux"

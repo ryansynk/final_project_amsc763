@@ -29,9 +29,9 @@ performs the computations. GPUs, on the other hand, consist of many small proces
 each capable of performing computations in parallel with one another. These small processing
 units are referred to by NVIDIA, a GPU manufacturer, as Streaming Multiprocessors (SMs). 
 Associated with each SM is a store of L1 cache memory. Each SM, in turn, can access a global 
-L2 memory cache --- see figure \ref{fig:gpudiagram} for a diagram of a recent GPU. This 
+L2 memory cache - see figure \ref{fig:gpudiagram} for a diagram of a recent GPU. This 
 architecture, with its combination of parallel processors and memory hierarchy, lends 
-itself well to fine-grained parallelization --- and in the case of computer graphics, dense 
+itself well to fine-grained parallelization - and in the case of computer graphics, dense 
 linear algebra calculations.
 
 \begin{figure}[H]
@@ -46,8 +46,8 @@ researchers implemented the first matrix-matrix multiplication algorithm for a G
 \cite{10.1145/582034.582089}. Eventually, certain applications running on GPUs began to 
 outperform their counterparts on CPUs. In a 2005 paper (whose authors include UMD 
 Professor Dinesh Manocha), a GPU implementation of LU factorization with partial 
-pivoting was shown to outperform a CPU. \cite{1559955}. Scientific computing wasn't the only
-field impacted by GPUs.
+pivoting was shown to outperform a CPU. \cite{1559955}. It should be noted, however, that 
+scientific computing wasn't the only field impacted by GPUs.
 
 The training of deep neural networks is a process which involves large amounts of dense
 matrix-vector and matrix-matrix multiplications. The discovery that GPUs are well-suited 
@@ -63,7 +63,7 @@ as many GPUs as CPUs \cite{frontier}.
 
 \subsection*{QR Factorization}
 
-In this report, we will develop a GPU-based method to solve the problem of factorizing 
+In this report, we will showcase a GPU-based method to solve the problem of factorizing 
 an $m \times n$ matrix $A$ as the product $A = QR$. Here, $Q \in \mathbb{R}^{m \times m}$ 
 is an $m \times m$ unitary matrix, and $R$ is an upper-triangular matrix. A number of basic
 algorithms for finding such a decomposition exist, and they all follow the pattern of
@@ -78,7 +78,7 @@ These methods include
 
 For the latter, a series of Householder transformations are used to zero out entries 
 below the diagonal of $A$. Given a vector $x \in \mathbb{R}^{n}$, a Householder matrix $P_x$ 
-can be generated such that $P_x x = \|x\|e_1$ --- in other words, the matrix transforms
+can be generated such that $P_x x = \|x\|e_1$ - in other words, the matrix transforms
 the vector $x$ into a multiple of the $1^{st}$ basis vector in $\mathbb{R}^{n}$.
 
 The transformation $P_x$ is of the form
@@ -88,7 +88,7 @@ The transformation $P_x$ is of the form
 \end{flalign*}
 
 If we choose $x_k$ to be the the vector in $\mathbb{R}^{n - k}$ consisting of entries of the
-$k^{th}$ column of $A$, starting at the diagonal and moving downwards ($A(m:k, n)$ in 
+$k^{th}$ column of $A$, starting at the diagonal and moving downwards ($A(k:m, k)$ in 
 MATLAB notation) we can create a householder transformation $P_k$ which zeros out the 
 entries below the diagonal of the  $k^{th}$ column of $A$. See figure \ref{fig:householder_qr}
 for a diagram.
@@ -141,8 +141,9 @@ Putting this together gives the following $QR$ algorithm:
 \end{algorithmic}
 \end{algorithm}
 
-This $QR$ algorithm works well, but for our purposes it will require some modification
-to run quickly on a GPU.
+Here, the function \textbf{house} takes in a vector $x$, and returns $v = x - \|x\|e_1$
+and  $\beta = \frac{2}{v^{T}v}$. This $QR$ algorithm works well, but for our purposes 
+it will require some modification to run quickly on a GPU.
 
 \section*{Algorithm}
 As was mentioned before, GPUs can offer speedups to many different problems. However,
@@ -157,12 +158,14 @@ In this way, GPUs will offer much greater speedups in computing $QR$ factorizati
 for \textbf{large} matrices, and our algorithm is tailored around that idea.
 
 Additionally, when data is on the GPU, in order to maximize efficiency, as many computations
-as possible should be performed in parallel. In this way,... As \cite{10.1145/1513895.1513904}
-states, in the above algorithm, "the amount of computation per memory element fetched 
-from global memory is quite low." Currently, the algorithm... So if we want to take advantage
-of the speedups that a GPU has to offer, we will have to give the GPU a sufficient amount of 
-work to do. In this way, we'd like to transition our computation from operating solely in
-terms of matrix-vector products, and shift it to focusing on matrix-matrix products.
+as possible should be performed in parallel. In this way, the cost of moving data from 
+memory to an SM to perform computation is offset by the parallelism inherent in the GPU.
+As \cite{10.1145/1513895.1513904} states, in the above basic QR algorithm, 
+"the amount of computation per memory element fetched from global memory is quite low." 
+So if we want to take advantage of the speedups that a GPU has to offer, we will have to 
+give the GPU a sufficient amount of work to do per memory element. In this way, 
+we'd like to transition our computation from operating solely in terms of 
+matrix-vector products, and shift it to focusing on matrix-matrix products.
 
 It is with this in mind that we turn to a 1985 result of Bischof and Van Loan
 \cite{osti_6535818}. They showed that applying a series of rank-1 updates
@@ -176,7 +179,7 @@ Is equivalent to applying a rank-r update of the following form:
            &= I + YW^{T}
 \end{flalign*}
 For $m\times r$ matrices $W$ and $Y$, which are constructed from the vectors and scalars
-$(\beta_i, v_i)$. Their construction is outlined in the following algorithm:
+$(\beta_i, v_i)$. Their construction is outlined in algorithm \ref{alg:wy}.
 
 \begin{algorithm}
 \caption{Construction of $W$, $Y$ matrices}\label{alg:wy}
@@ -258,16 +261,16 @@ written seperately.
 
 Kerr's original paper set the $r$ value parameter (size of each block) to be 64. They
 mention in the paper that "r should be chosen to minimize total runtime on the target
-architecture." In experiments, the code ran slightly faster with higher values, of 128 and 256.
-Experiments for varying $r$ levels are shown below.
+architecture." In experiments, the code ran slightly faster with higher values, so 128
+was used.
 
 In the original implementation, Kerr et. al did not use the CuBLAS kernel for 
 matrix-vector multiply. They cited the fact that their own implementation could 
 achieve a speedup over the CUDA implementation. For the purposes of this report, 
-an original \texttt{gemv} (generalized matrix-vector multiply) kernel was not given. 
+an original \texttt{gemv} (generalized matrix-vector multiply) kernel was not written. 
 This has not been tested, but there is a good chance that in the 12 years since the
 publication of Kerr's paper, NVIDIA has since tuned their CuBLAS library to be very
-performant --- CuBLAS had only existed for a couple years at the time of their publication.
+performant - CuBLAS had only existed for a couple years at the time of their publication.
 
 All code for the project can be found in the following github repository: 
 \url{https://github.com/ryansynk/final_project_amsc763}. Along with a 
@@ -277,32 +280,58 @@ implemented along the way:
     \item A python (serial/CPU) implementation of non-blocked Householder QR
     \item A python (serial/CPU) implementation of blocked Householder QR
     \item A C/CUDA (GPU) implementation of non-blocked Householder QR
-    \item A C (serial/CPU) implementation of non-blocked Householder QR
 \end{enumerate}
 
 \par\null\par
 
 \section*{Results}
 \par\null\par
-TODO:
-\begin{enumerate}
-    \item Description of hardware tests are ran on.
-    \item Plot of time for varying sizes of $r$.
-    \item Plot of theoretical peak double precision performance on GPU versus
-        actual implementation
-    \item Plot of Python CPU versus C++ GPU plot (time)
-    \item Plot of their results vs mine
-\end{enumerate}
+
+All tests were run on the UMD CML cluster, using an NVIDIA GeForce RTX 2080 Ti GPU. This GPU
+has a peak memory bandwidth of 616.0 GB/s. Following the testing from Kerr's paper, the Block 
+QR iteration was ran on a series of increasingly large, randomly generated rectangular 
+matrices. Each matrix had twice as many rows as columns.
+
+All applications were ran with double precision floating point, and each matrix was stored
+in column-major order. Error conditions were checked as follows:
+
+\begin{flalign*}
+    \|QR - A\| \leq m 2^{-23}\|A\| \\
+    \|Q^{T}Q - I\| \leq m 2^{-23}
+\end{flalign*}
+
+Since there is no code available from Kerr's original paper, there is no easy way to
+directly compare our results. That being said, the plots look similar between implementations.
+Their implementation was tested on single-precision floating point, and given that the plots
+like similar between ours, there is most likely a significant speedup for my case - most likely
+due to modern hardware.
+
+A plot of increasing matrix size versus runtime is given below:
+
+The GPU implementation offered significant speedup over the python non-parallel implementation of 
+block QR. The plot for speedup is given in figure \ref{fig:cpu_gpu_graph}. As the matrices get
+larger, the disparity in runtime grows. At the largest matrix size, a 2x speedup was observed.
+
+\begin{figure}[H]
+    \includegraphics[scale=0.8]{python_cpu_size_v_runtime_and_gpu}
+    \caption{Speedup of GPU over CPU for increasing problem size}
+    \label{fig:cpu_gpu_graph}
+\end{figure}
 
 \section*{Conclusion}
-\par\null\par
-TODO
-\begin{enumerate}
-    \item Sum up what was done
-    \item Recap main points
-    \item End with further directions: parallelizing kernels, discussing if it would
-        be useful for writing a least-squares solver
-\end{enumerate}
+In conclusion, this paper presented an implementation of a Block Householder QR algorithm
+which was capable of efficently running on a GPU. 
+
+As shown in the results, the block householder QR GPU code had a significant speedup over 
+the CPU code.
+
+For further direction in this line of work, it would be interesting to pursue
+ways in which the code could be optimized even further. In Kerr's paper, they write an
+algorithm to simultaneously compute the norms of the columns of each block in parallel,
+but that optimization did not exist in this implementation.
+
+In general, GPU programming can be difficult, but dramatic perfomance gains can be
+observed if careful attention is paid to the problem and the implementation.
 
 \bibliography{citations}
 \bibliographystyle{ieeetr}

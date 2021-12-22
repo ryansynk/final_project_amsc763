@@ -142,6 +142,9 @@ INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx12.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx8.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmbx6.tfm
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmtt12.tfm
+INPUT python_cpu_size_v_runtime_and_gpu.png
+INPUT ./python_cpu_size_v_runtime_and_gpu.png
+INPUT ./python_cpu_size_v_runtime_and_gpu.png
 INPUT paper.bbl
 INPUT paper.bbl
 INPUT /usr/share/texlive/texmf-dist/fonts/tfm/public/cm/cmti12.tfm
